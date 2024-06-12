@@ -113,253 +113,55 @@ In this section, you will find the detailed information regarding the features o
 
 ### Endpoints
 
-#### View Receive and Sort Lists
+#### Register
 
-Retrieves a list of received and sorted items, including product information, tracking numbers, date received, individuals in charge, source, received and expected amounts, and observations on quantity disparities.
+Register administrator
 
-- **URL:** `reports/{receive-and-sort-lists}`
+- **URL:** `http://localhost:3006/api/auth/register`
 - **Headers:**
   - **Content-type:** `application/json`
-- **Method:** `GET`
+- **Method:** `POST`
 - **Parameters:**
-  - `receive-and-sort-lists` (required)
+  - (None)
 - **Success Response:**
 
   - **Status Code:** `200 OK`
   - **Response Body:**
 
-    ```json
+    ````json
     {
-      "status": "success",
-      "data": [
-        {
-          "product": "HP Printer",
-          "to_no": "TONR97",
-          "date_received": "12/26/2021",
-          "received_by": "Clerk 1",
-          "Source": "Store 1",
-          "received_qty": 50,
-          "expected_qty": 50,
-          "qty_difference_remarks": "-",
-        },
-        {
-          "product": "Razer Ring Light",
-          "to_no": "GRN87",
-          "date_received": "12/26/2021",
-          "received_by": "Clerk 2",
-          "Source": "Supplier 1",
-          "received_qty": 50,
-          "expected_qty": 50,
-          "qty_difference_remarks": "-",
-        },
-        {
-          "product": "RGB Light",
-          "to_no": "GRN87",
-          "date_received": "12/26/2021",
-          "received_by": "Clerk 2",
-          "Source": "Supplier 2",
-          "received_qty": 42,
-          "expected_qty": 45,
-          "qty_difference_remarks": "Received Incomplete"
+        "success": true,
+        "method": "POST",
+        "data": {
+            "id": "28080be9-9681-4b88-bebe-2872f0c0cfb2",
+            "fullname": "Emmanuel ADMIN",
+            "username": "iamadmin1",
+            "image": null,
+            "role": "ADMIN",
+            "created": "2024-06-12T03:35:39.861Z",
+            "updated": "2024-06-12T03:35:39.861Z",
+            "lastLogin": null,
+            "auth": {
+                "email": "motaemman1@gmail.com"
+            }
         }
-      ]
-      "method": "GET"
+
     }
 
-
-    ```
+        ```
+    ````
 
 - **Error Responses**:
 
   - **Status Code**: `200 OK`
   - **Response Body**:
 
-    - **Display error message store manager is not authenticated**
+    - **Display error if the email is not unique or the username**
 
       ```json
       {
         "status": "fail",
-        "message": "The store manager is not authenticated"
-      }
-      ```
-
-    - **Display error message if the store manager is not authorized to viewing lists**
-
-      ```json
-      {
-        "status": "fail",
-        "message": "Unathorized Access"
-      }
-      ```
-
-    - **Data Validation**
-
-      ```json
-      {
-        "status": "fail",
-        "message": "Invalid Data"
-      }
-      ```
-
-    - **Query Check**
-
-      ```json
-      {
-        "status": "fail",
-        "message": "Query error"
-      }
-      ```
-
-<<<<<<< HEAD
-Validates the username and password provided by the user. If the user is authenticated and authorized, the inventory information by a specific date range will be returned.
-
-- **URL:** `reports/{inventory_reports}{date}`
-- **Headers:**
-  - **Content-type:** `application/json`
-- **Method:** `GET`
-- **Parameters:**
-  - `inventory_reports` (required)
-  - `date` (required)
-- **Success Response:**
-
-  - **Status Code:** `200 OK`
-  - **Response Body:**
-
-    ```json
-    {
-      "status": "success",
-      "data": [
-        {
-          "product_name": "HP Printer",
-          "sku": 3,
-          "beginning_stock": 50,
-          "ending_stock": 50,
-          "quantity_in": ,
-          "quantity_out": ,
-        },
-        {
-          "product_name": "Razer Ring Light",
-          "sku": 6,
-          "beginning_stock": 102,
-          "ending_stock": 102,
-          "quantity_in": ,
-          "quantity_out": ,
-        },
-        {
-          "product_name": "RGB Light",
-          "sku": 1,
-          "beginning_stock": 150,
-          "ending_stock": 150,
-          "quantity_in": ,
-          "quantity_out": ,
-        },
-        {
-          "product_name": "iPhone 13 Clear Case",
-          "sku": 1,
-          "beginning_stock": 123,
-          "ending_stock": 123,
-          "quantity_in": 7,
-          "quantity_out": 7,
-        },
-        {
-          "product_name": "Samsung A12 Screen Protector",
-          "sku": 1,
-          "beginning_stock": 200,
-          "ending_stock": 150,
-          "quantity_in": 5,
-          "quantity_out": 5,
-        },
-        {
-          "product_name": "Powerbank",
-          "sku": 9,
-          "beginning_stock": 70,
-          "ending_stock": 60,
-          "quantity_in": 1,
-          "quantity_out": 1,
-        },
-        {
-          "product_name": "HP Printer",
-          "sku": 1,
-          "beginning_stock": 85,
-          "ending_stock": 85,
-          "quantity_in": ,
-          "quantity_out": ,
-        },
-        {
-          "product_name": "TP-Link Router",
-          "sku": 1,
-          "beginning_stock": 90,
-          "ending_stock": 90,
-          "quantity_in": ,
-          "quantity_out": ,
-        },
-        {
-          "product_name": "Alhua Mouse Pad",
-          "sku": 1,
-          "beginning_stock": 240,
-          "ending_stock": 240,
-          "quantity_in": ,
-          "quantity_out": ,
-        },
-        {
-          "product_name": "USB Type-C Charger",
-          "sku": 1,
-          "beginning_stock": 130,
-          "ending_stock": 130,
-          "quantity_in": ,
-          "quantity_out": ,
-        },
-        {
-          "product_name": "Epson Ink",
-          "sku": 3,
-          "beginning_stock": 320,
-          "ending_stock": 300,
-          "quantity_in": ,
-          "quantity_out": ,
-        }
-      ],
-      "method": "GET"
-    }
-    ```
-
-- **Error Responses:**
-
-  - **Status Code:** `200 OK`
-  - **Response Body**
-
-    - **Display error message if the store manager is not authenticated**
-
-      ```json
-      {
-        "status": "fail",
-        "message": "Authentication Failed"
-      }
-      ```
-
-    - **Display error message if the store manager is not authorized**
-
-      ```json
-      {
-        "status": "fail",
-        "message": "Unauthorized Access"
-      }
-      ```
-
-    - **Display error message if the data is invalid**
-
-      ```json
-      {
-        "status": "fail",
-        "message": "Invalid Data"
-      }
-      ```
-
-    - **Display error message if the query is unsuccessful**
-
-      ```json
-      {
-        "status": "fail",
-        "message": "Query Unsuccessful"
+        "message": "The email address must be unique or username"
       }
       ```
 
