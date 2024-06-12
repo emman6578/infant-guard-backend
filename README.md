@@ -210,6 +210,7 @@ Retrieves a list of received and sorted items, including product information, tr
       }
       ```
 
+<<<<<<< HEAD
 Validates the username and password provided by the user. If the user is authenticated and authorized, the inventory information by a specific date range will be returned.
 
 - **URL:** `reports/{inventory_reports}{date}`
@@ -365,6 +366,13 @@ Validates the username and password provided by the user. If the user is authent
 ## Contribution
 
 Contributions are welcome! If you would like to contribute to the ChowPao POS and Inventory these are the steps:
+=======
+
+
+## Contribution
+
+Contributions are welcome! If you would like to contribute to the ChowPao POS and Inventory these are the steps
+>>>>>>> cb7bad5e2b2aded514b9ffac1ad03cbbcf53e724
 
 1. Fork the repository.
 2. Create a new branch for your feature: `git checkout -b feature-name`
