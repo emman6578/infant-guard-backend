@@ -3,18 +3,21 @@ import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 
-//route import
-import AuthRoutes from "./Routes/AuthRoutes";
-// import UserRoutes from "./Routes/UserRoutes";
-import ProductRoutes from "./Routes/ProductRoutes";
-import CategoryRoutes from "./Routes/CategoryRoutes";
-import PrintRoutes from "./Routes/PrintRoutes";
-import CartRoutes from "./Routes/CartRoutes";
-import OrderRoutes from "./Routes/OrderRoutes";
-// import DriverRoutes from "./Routes/DriverRoutes";
+// admin route import
+import AuthRoutes from "./Admin/Routes/AuthRoutes";
+import ProductRoutes from "./Admin/Routes/ProductRoutes";
+import CategoryRoutes from "./Admin/Routes/CategoryRoutes";
+import PrintRoutes from "./Admin/Routes/PrintRoutes";
+import CartRoutes from "./Admin/Routes/CartRoutes";
+import OrderRoutes from "./Admin/Routes/OrderRoutes";
+import DeliveryRoutes from "./Admin/Routes/DeliveryRoutes";
+
+//driver route import
+import DriverAuth from "./Driver/Routes/DriverAuthRoutes";
+import DriverDelivery from "./Driver/Routes/DriverDeliveryRoutes";
 
 //error handler midddlewares
-import { errorHandler, notFound } from "./Middleware/ErrorHandler";
+import { errorHandler, notFound } from "./Admin/Middleware/ErrorHandler";
 
 const server = express();
 dotenv.config();
@@ -25,15 +28,18 @@ server.use(helmet());
 server.use(cors());
 server.use(express.json());
 
+//admin routes
 server.use("/api/auth", AuthRoutes);
 server.use("/api/product", ProductRoutes);
 server.use("/api/category", CategoryRoutes);
 server.use("/api/print", PrintRoutes);
-
 server.use("/api/cart", CartRoutes);
 server.use("/api/order", OrderRoutes);
-// server.use("/api/driver", DriverRoutes);
-// server.use("/api/user", UserRoutes);
+server.use("/api/delivery", DeliveryRoutes);
+
+//driver routes
+server.use("/api/driver/auth", DriverAuth);
+server.use("/api/driver/delivery", DriverDelivery);
 
 //error handler middleware
 server.use(notFound);

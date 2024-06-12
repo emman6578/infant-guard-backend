@@ -205,7 +205,7 @@ export const print = expressAsyncHandler(
         throw new Error("Error Getting all Products or Database is empty");
       }
 
-      const directoryPath = path.join(__dirname, "../../../Download");
+      const directoryPath = path.join(__dirname, "../../../../Download");
       // const filePath = path.join(directoryPath, "products.xlsx");
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const filePath = path.join(directoryPath, `products_${timestamp}.xlsx`);

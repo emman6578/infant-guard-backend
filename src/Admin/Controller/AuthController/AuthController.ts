@@ -1,8 +1,8 @@
 import { PrismaClient, Admin } from "@prisma/client";
 import { Request, Response } from "express";
-import { generateEmailToken } from "../../Config/Token/generateEmailToken";
-import { generateAuthToken } from "../../Config/Token/generateAPIToken";
-import { sendEmail } from "../../Config/Email/sendEmail";
+import { generateEmailToken } from "../../../Config/Token/generateEmailToken";
+import { generateAuthToken } from "../../../Config/Token/generateAPIToken";
+import { sendEmail } from "../../../Config/Email/sendEmail";
 import { successHandler } from "../../Middleware/ErrorHandler";
 import expressAsyncHandler from "express-async-handler";
 import { AdminInterface } from "../../Interface/AdminInterfaceRequest";
@@ -77,9 +77,9 @@ export const createToken = expressAsyncHandler(
         type: "EMAIL",
         emailToken,
         expiration,
-        user: {
+        admin: {
           connect: {
-            id: checkEmail.user_id,
+            id: checkEmail.admin_id,
           },
         },
       },
@@ -104,7 +104,7 @@ export const authToken = expressAsyncHandler(
 
     const dbEmailToken = await prisma.token.findUnique({
       where: { emailToken },
-      include: { user: { include: { auth: true } } },
+      include: { admin: { include: { auth: true } } },
     });
 
     if (!dbEmailToken || !dbEmailToken?.valid) {
@@ -115,7 +115,7 @@ export const authToken = expressAsyncHandler(
       throw new Error("Unathorized Access: Token expired");
     }
 
-    if (dbEmailToken?.user?.auth?.email !== email) {
+    if (dbEmailToken?.admin?.auth?.email !== email) {
       throw new Error("Unauthorized Access Register first");
     }
 
@@ -127,7 +127,7 @@ export const authToken = expressAsyncHandler(
       data: {
         type: "API",
         expiration,
-        user: { connect: { id: dbEmailToken.user_id } },
+        admin: { connect: { id: dbEmailToken.admin_id! } },
       },
     });
 

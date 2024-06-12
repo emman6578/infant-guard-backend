@@ -26,14 +26,14 @@ export const authenticateToken = expressAsyncHandler(
       };
       const dbToken = await prisma.token.findUnique({
         where: { id: payload.tokenId },
-        include: { user: true },
+        include: { admin: true },
       });
 
       if (!dbToken?.valid || dbToken.expiration < new Date()) {
         throw new Error("API token not valid or expired");
       }
 
-      req.admin = dbToken?.user;
+      req.admin = dbToken?.admin!;
     } catch (error) {
       throw new Error("Unathorized");
     }

@@ -13,7 +13,7 @@ This is the documentation for the ChowPao POS and Inventory System
 
 - ### Passwordless Authentication
 
-  - [**Register**](#view-receive-and-sort-lists)
+  - [**Register**](#register)
 
     This feature allows owner of the system to register administrator
 
@@ -128,28 +128,25 @@ Register administrator
   - **Status Code:** `200 OK`
   - **Response Body:**
 
-    ````json
+    ```json
     {
-        "success": true,
-        "method": "POST",
-        "data": {
-            "id": "28080be9-9681-4b88-bebe-2872f0c0cfb2",
-            "fullname": "Emmanuel ADMIN",
-            "username": "iamadmin1",
-            "image": null,
-            "role": "ADMIN",
-            "created": "2024-06-12T03:35:39.861Z",
-            "updated": "2024-06-12T03:35:39.861Z",
-            "lastLogin": null,
-            "auth": {
-                "email": "motaemman1@gmail.com"
-            }
+      "success": true,
+      "method": "POST",
+      "data": {
+        "id": "28080be9-9681-4b88-bebe-2872f0c0cfb2",
+        "fullname": "Emmanuel ADMIN",
+        "username": "iamadmin1",
+        "image": null,
+        "role": "ADMIN",
+        "created": "2024-06-12T03:35:39.861Z",
+        "updated": "2024-06-12T03:35:39.861Z",
+        "lastLogin": null,
+        "auth": {
+          "email": "motaemman1@gmail.com"
         }
-
+      }
     }
-
-        ```
-    ````
+    ```
 
 - **Error Responses**:
 

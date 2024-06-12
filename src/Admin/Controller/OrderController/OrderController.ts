@@ -13,7 +13,6 @@ export const createOrder = expressAsyncHandler(
     // Check if user ID exists
     const adminId = req.admin?.id;
     if (!adminId) {
-      res.status(400);
       throw new Error("User ID is required");
     }
 
