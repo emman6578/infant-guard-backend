@@ -56,6 +56,40 @@ const createExcelFile = async (products: any[], filePath: string) => {
     });
   });
 
+  // Add data validation for the "Stock Status" column
+  worksheet
+    .getColumn(13)
+    .eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+      if (rowNumber > 1) {
+        // Skip the header row
+        cell.dataValidation = {
+          type: "list",
+          allowBlank: false,
+          formulae: ['"IN_STOCK,OUT_OF_STOCK,LOW_STOCK"'],
+          showErrorMessage: true,
+          errorTitle: "Invalid Unit of Measure",
+          error:
+            "Please select a value from the dropdown list: IN_STOCK, OUT_OF_STOCK, LOW_STOCK",
+        };
+      }
+    });
+
+  // Add data validation for the "Unit of Measure" column
+  worksheet.getColumn(8).eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+    if (rowNumber > 1) {
+      // Skip the header row
+      cell.dataValidation = {
+        type: "list",
+        allowBlank: false,
+        formulae: ['"KILOGRAMS,LITERS,PIECES"'],
+        showErrorMessage: true,
+        errorTitle: "Invalid Unit of Measure",
+        error:
+          "Please select a value from the dropdown list: KILOGRAMS, LITERS, PIECES",
+      };
+    }
+  });
+
   if (!fs.existsSync(path.dirname(filePath))) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
   }
@@ -82,7 +116,7 @@ const readExcelFile = async (filePath: string) => {
     [key: string]: {
       barcode?: string;
       name?: string;
-      quantity?: string;
+      quantity?: number;
       price?: number;
       brand?: string;
       description?: string;
@@ -101,7 +135,7 @@ const readExcelFile = async (filePath: string) => {
       productsToUpdate[rowData_id] = {
         barcode: row.getCell(2).value?.toString(),
         name: row.getCell(3).value?.toString(),
-        quantity: row.getCell(4).value?.toString(),
+        quantity: row.getCell(4).value as number,
         price: row.getCell(5).value as number,
         brand: row.getCell(6).value?.toString(),
         description: row.getCell(7).value?.toString(),
@@ -120,7 +154,7 @@ const updateProductsInDatabase = async (productsToUpdate: {
   [key: string]: {
     barcode?: string;
     name?: string;
-    quantity?: string;
+    quantity?: number;
     price?: number;
     brand?: string;
     description?: string;

@@ -9,7 +9,7 @@ import expressAsyncHandler from "express-async-handler";
 import {
   checkRequiredFieldsProducts,
   checkRequiredUpdateFieldsProducts,
-} from "../../Helpers/validateCheckRequiredFields";
+} from "../../Helpers/validateCheckRequiredFields_Products";
 import { validateIdParams } from "../../Helpers/validateIdParams";
 
 const prisma = new PrismaClient();

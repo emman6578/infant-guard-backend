@@ -1,7 +1,7 @@
 export interface ProductInterface {
   barcode: string;
   name: string;
-  quantity: string;
+  quantity: number;
   price: number;
   Category: Category[];
   brand: string;

@@ -9,8 +9,8 @@ import AuthRoutes from "./Routes/AuthRoutes";
 import ProductRoutes from "./Routes/ProductRoutes";
 import CategoryRoutes from "./Routes/CategoryRoutes";
 import PrintRoutes from "./Routes/PrintRoutes";
-// import CartRoutes from "./Routes/CartRoutes";
-// import OrderRoutes from "./Routes/OrderRoutes";
+import CartRoutes from "./Routes/CartRoutes";
+import OrderRoutes from "./Routes/OrderRoutes";
 // import DriverRoutes from "./Routes/DriverRoutes";
 
 //error handler midddlewares
@@ -29,10 +29,11 @@ server.use("/api/auth", AuthRoutes);
 server.use("/api/product", ProductRoutes);
 server.use("/api/category", CategoryRoutes);
 server.use("/api/print", PrintRoutes);
-// server.use("/api/user", UserRoutes);
-// server.use("/api/cart", CartRoutes);
-// server.use("/api/order", OrderRoutes);
+
+server.use("/api/cart", CartRoutes);
+server.use("/api/order", OrderRoutes);
 // server.use("/api/driver", DriverRoutes);
+// server.use("/api/user", UserRoutes);
 
 //error handler middleware
 server.use(notFound);

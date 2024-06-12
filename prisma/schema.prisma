@@ -28,8 +28,9 @@ model Admin {
   lastLogin DateTime?
 
   Token Token[]
-  // Cart                     Cart?
-  // Order                    Order[]
+  Cart  Cart?
+  Order Order[]
+
   // Delivery                 Delivery[]
   // RemainingProductDelivery RemainingProductDelivery[]
   // DriverProductSold        DriverProductSold[]
@@ -68,7 +69,7 @@ model Product {
 
   barcode             String       @unique
   name                String
-  quantity            String
+  quantity            Int
   price               Float
   Category            Category[]
   brand               String
@@ -86,9 +87,9 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // ProductInCart ProductInCart[]
+  ProductInCart ProductInCart[]
+  Order         Order[]
 
-  // Order                    Order[]
   // RemainingProductDelivery RemainingProductDelivery[]
   // DriverProductSold        DriverProductSold[]
   // DeliveryProducts         DeliveryProducts[]
@@ -104,8 +105,57 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  //relationships
   Product Product[]
+}
+
+model Cart {
+  id String @id @default(uuid())
+
+  ProductInCart ProductInCart[]
+  total_price   Float?
+
+  admin    Admin  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  admin_id String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductInCart {
+  id String @id @default(uuid())
+
+  product    Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  product_id String
+
+  quantity Int
+  total    Float
+  status   Status?
+
+  cart    Cart   @relation(fields: [cart_id], references: [id], onDelete: Cascade)
+  cart_id String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([product_id, cart_id])
+}
+
+model Order {
+  id String @id @default(uuid())
+
+  total          Float //base on the product get in the product in cart calculate the total order
+  payment_status PaymentStatus?
+  quantity       Int //this quntatity is getting from the ProductinCart
+  status         Status? //also for status fetch first the product in cart to get the status
+  address        String
+
+  admin    Admin  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  admin_id String
+
+  product Product[] //to get the product id first fetch the productin cart find the id of the product inside it
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum Type {
@@ -128,4 +178,16 @@ enum StockStatus {
   IN_STOCK
   OUT_OF_STOCK
   LOW_STOCK
+}
+
+enum Status {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+enum PaymentStatus {
+  PAID
+  UNPAID
+  PROCESSING
 }
