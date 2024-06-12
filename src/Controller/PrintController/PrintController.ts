@@ -43,8 +43,6 @@ const createExcelFile = async (products: any[], filePath: string) => {
     { header: "Stock Status", key: "stock_status" },
     { header: "Minimum Stock Level", key: "minimum_stock_level" },
     { header: "Maximum Stock Level", key: "maximum_stock_level" },
-    { header: "Created At", key: "createdAt" },
-    { header: "Updated At", key: "updatedAt" },
     { header: "Category", key: "category" },
   ];
   worksheet.columns = columns;
