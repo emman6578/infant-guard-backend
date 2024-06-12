@@ -365,14 +365,9 @@ Validates the username and password provided by the user. If the user is authent
 
 ## Contribution
 
-Contributions are welcome! If you would like to contribute to the ChowPao POS and Inventory these are the steps:
-=======
-
-
-## Contribution
-
 Contributions are welcome! If you would like to contribute to the ChowPao POS and Inventory these are the steps
->>>>>>> cb7bad5e2b2aded514b9ffac1ad03cbbcf53e724
+
+> > > > > > > cb7bad5e2b2aded514b9ffac1ad03cbbcf53e724
 
 1. Fork the repository.
 2. Create a new branch for your feature: `git checkout -b feature-name`
@@ -385,5 +380,3 @@ Please ensure your code follows the project's coding conventions and includes ap
 ## License
 
 All rights reserved.
-
-The Reports Store Manager Retail Management System is protected by copyright and other intellectual property laws. Any unauthorized use, reproduction, or distribution of the microservice or its components is strictly prohibited.
