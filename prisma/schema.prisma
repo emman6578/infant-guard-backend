@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // provider = "postgresql"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id String @id @default(uuid())
+
+  auth     Auth?
+  fullname String
+  username String  @unique
+  image    String?
+  role     Role    @default(DRIVER)
+
+  created   DateTime  @default(now())
+  updated   DateTime  @updatedAt
+  lastLogin DateTime?
+
+  Token Token[]
+  // Cart                     Cart?
+  // Order                    Order[]
+  // Delivery                 Delivery[]
+  // RemainingProductDelivery RemainingProductDelivery[]
+  // DriverProductSold        DriverProductSold[]
+  // DriverProductInventory   DriverProductInventory[]
+}
+
+model Auth {
+  id String @id @default(uuid())
+
+  email String @unique
+
+  user    Admin  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id String @unique
+
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+}
+
+model Token {
+  id String @id @default(uuid())
+
+  type       Type     @default(EMAIL) // EMAIL || API
+  emailToken String?  @unique
+  valid      Boolean  @default(true)
+  expiration DateTime
+
+  user_id String
+  user    Admin  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+}
+
+model Product {
+  id String @id @default(uuid())
+
+  barcode             String       @unique
+  name                String
+  quantity            String
+  price               Float
+  Category            Category[]
+  brand               String
+  description         String
+  unit_of_measure     Measurement?
+  expiration          String
+  date_of_manufacture String
+  date_of_entry       DateTime     @default(now())
+  supplier            String
+
+  stock_status        StockStatus?
+  minimum_stock_level Int
+  maximum_stock_level Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ProductInCart ProductInCart[]
+
+  // Order                    Order[]
+  // RemainingProductDelivery RemainingProductDelivery[]
+  // DriverProductSold        DriverProductSold[]
+  // DeliveryProducts         DeliveryProducts[]
+
+  // DriverProductInventory DriverProductInventory[]
+}
+
+model Category {
+  id String @id @default(uuid())
+
+  name String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  //relationships
+  Product Product[]
+}
+
+enum Type {
+  EMAIL
+  API
+}
+
+enum Role {
+  ADMIN
+  DRIVER
+}
+
+enum Measurement {
+  KILOGRAMS
+  LITERS
+  PIECES
+}
+
+enum StockStatus {
+  IN_STOCK
+  OUT_OF_STOCK
+  LOW_STOCK
+}
