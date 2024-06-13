@@ -67,9 +67,10 @@ model Token {
 model Product {
   id String @id @default(uuid())
 
-  barcode             String       @unique
+  barcode             String?      @unique
   name                String
   quantity            Int
+  weight              Float
   price               Float
   Category            Category[]
   brand               String
@@ -187,6 +188,7 @@ enum Role {
 }
 
 enum Measurement {
+  GRAMS
   KILOGRAMS
   LITERS
   PIECES

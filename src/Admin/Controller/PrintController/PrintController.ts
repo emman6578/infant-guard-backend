@@ -28,22 +28,23 @@ const createExcelFile = async (products: any[], filePath: string) => {
   const worksheet = workbook.addWorksheet("Products");
 
   const columns = [
-    { header: "ID", key: "id" },
-    { header: "Barcode", key: "barcode" },
-    { header: "Name", key: "name" },
-    { header: "Quantity", key: "quantity" },
-    { header: "Price", key: "price" },
-    { header: "Brand", key: "brand" },
-    { header: "Description", key: "description" },
-    { header: "Unit of Measure", key: "unit_of_measure" },
-    { header: "Expiration", key: "expiration" },
-    { header: "Date of Manufacture", key: "date_of_manufacture" },
-    { header: "Date of Entry", key: "date_of_entry" },
-    { header: "Supplier", key: "supplier" },
-    { header: "Stock Status", key: "stock_status" },
-    { header: "Minimum Stock Level", key: "minimum_stock_level" },
-    { header: "Maximum Stock Level", key: "maximum_stock_level" },
-    { header: "Category", key: "category" },
+    { header: "ID", key: "id" }, //1
+    { header: "Barcode", key: "barcode" }, //2
+    { header: "Name", key: "name" }, //3
+    { header: "Quantity", key: "quantity" }, //4
+    { header: "Weight", key: "weight" }, //5
+    { header: "Unit of Measure", key: "unit_of_measure" }, //6
+    { header: "Price", key: "price" }, //7
+    { header: "Brand", key: "brand" }, //8
+    { header: "Description", key: "description" }, //9
+    { header: "Category", key: "category" }, //10
+    { header: "Supplier", key: "supplier" }, //11
+    { header: "Stock Status", key: "stock_status" }, //12
+    { header: "Minimum Stock Level", key: "minimum_stock_level" }, //13
+    { header: "Maximum Stock Level", key: "maximum_stock_level" }, //14
+    { header: "Expiration", key: "expiration" }, //15
+    { header: "Date of Manufacture", key: "date_of_manufacture" }, //16
+    { header: "Date of Entry", key: "date_of_entry" }, //17
   ];
   worksheet.columns = columns;
 
@@ -56,7 +57,7 @@ const createExcelFile = async (products: any[], filePath: string) => {
 
   // Add data validation for the "Stock Status" column
   worksheet
-    .getColumn(13)
+    .getColumn(12)
     .eachCell({ includeEmpty: true }, (cell, rowNumber) => {
       if (rowNumber > 1) {
         // Skip the header row
@@ -73,17 +74,17 @@ const createExcelFile = async (products: any[], filePath: string) => {
     });
 
   // Add data validation for the "Unit of Measure" column
-  worksheet.getColumn(8).eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+  worksheet.getColumn(6).eachCell({ includeEmpty: true }, (cell, rowNumber) => {
     if (rowNumber > 1) {
       // Skip the header row
       cell.dataValidation = {
         type: "list",
         allowBlank: false,
-        formulae: ['"KILOGRAMS,LITERS,PIECES"'],
+        formulae: ['"KILOGRAMS,GRAMS,LITERS,PIECES"'],
         showErrorMessage: true,
         errorTitle: "Invalid Unit of Measure",
         error:
-          "Please select a value from the dropdown list: KILOGRAMS, LITERS, PIECES",
+          "Please select a value from the dropdown list: KILOGRAMS, GRAMS, LITERS, PIECES,",
       };
     }
   });
@@ -115,10 +116,12 @@ const readExcelFile = async (filePath: string) => {
       barcode?: string;
       name?: string;
       quantity?: number;
+      weight?: number;
+      unit_of_measure?: Measurement;
       price?: number;
       brand?: string;
       description?: string;
-      unit_of_measure?: Measurement;
+      supplier?: string;
       stock_status?: StockStatus;
       minimum_stock_level?: number;
       maximum_stock_level?: number;
@@ -134,13 +137,15 @@ const readExcelFile = async (filePath: string) => {
         barcode: row.getCell(2).value?.toString(),
         name: row.getCell(3).value?.toString(),
         quantity: row.getCell(4).value as number,
-        price: row.getCell(5).value as number,
-        brand: row.getCell(6).value?.toString(),
-        description: row.getCell(7).value?.toString(),
-        unit_of_measure: row.getCell(8).value as Measurement,
-        stock_status: row.getCell(13).value as StockStatus,
-        minimum_stock_level: row.getCell(14).value as number,
-        maximum_stock_level: row.getCell(15).value as number,
+        weight: row.getCell(5).value as number,
+        unit_of_measure: row.getCell(6).value as Measurement,
+        price: row.getCell(7).value as number,
+        brand: row.getCell(8).value?.toString(),
+        description: row.getCell(9).value?.toString(),
+        supplier: row.getCell(11).value as StockStatus,
+        stock_status: row.getCell(12).value as StockStatus,
+        minimum_stock_level: row.getCell(13).value as number,
+        maximum_stock_level: row.getCell(14).value as number,
       };
     }
   });
@@ -153,10 +158,12 @@ const updateProductsInDatabase = async (productsToUpdate: {
     barcode?: string;
     name?: string;
     quantity?: number;
+    weight?: number;
+    unit_of_measure?: Measurement;
     price?: number;
     brand?: string;
     description?: string;
-    unit_of_measure?: Measurement;
+    supplier?: string;
     stock_status?: StockStatus;
     minimum_stock_level?: number;
     maximum_stock_level?: number;
@@ -168,10 +175,11 @@ const updateProductsInDatabase = async (productsToUpdate: {
       barcode: data.barcode,
       name: data.name,
       quantity: data.quantity,
+      weight: data.weight,
+      unit_of_measure: data.unit_of_measure,
       price: data.price,
       brand: data.brand,
       description: data.description,
-      unit_of_measure: data.unit_of_measure,
       stock_status: data.stock_status,
       minimum_stock_level: data.minimum_stock_level,
       maximum_stock_level: data.maximum_stock_level,
@@ -310,6 +318,43 @@ export const download = expressAsyncHandler(
     } catch (error) {
       console.error("Error processing download request:", error);
       res.status(500).send("Error processing download request.");
+    }
+  }
+);
+
+export const printBySupplier = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    try {
+      const { supplier } = req.query;
+
+      const products = await prisma.product.findMany({
+        where: {
+          supplier: supplier ? supplier.toString() : undefined,
+        },
+        include: {
+          Category: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!products || products.length === 0) {
+        throw new Error("No products found for the specified supplier.");
+      }
+
+      const directoryPath = path.join(__dirname, "../../../../Download");
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const filePath = path.join(directoryPath, `products_${timestamp}.xlsx`);
+
+      await createExcelFile(products, filePath);
+
+      console.log("Excel file generated successfully.");
+      res.status(200).send("Excel file generated successfully.");
+    } catch (error) {
+      console.error("Error generating Excel file:", error);
+      res.status(500).send("Error generating Excel file.");
     }
   }
 );

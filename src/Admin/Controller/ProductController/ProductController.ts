@@ -50,19 +50,17 @@ export const addProduct = expressAsyncHandler(
         barcode: product.barcode,
         name: product.name,
         quantity: product.quantity,
+        weight: product.weight,
+        unit_of_measure: product.unit_of_measure,
         price: product.price,
         Category: {
           connect: categories,
         },
         brand: product.brand,
-
         description: product.description,
-        unit_of_measure: product.unit_of_measure,
         expiration: product.expiration,
         date_of_manufacture: product.date_of_manufacture,
-
         supplier: product.supplier,
-
         stock_status: product.stock_status,
         minimum_stock_level: product.minimum_stock_level,
         maximum_stock_level: product.maximum_stock_level,
@@ -171,10 +169,9 @@ export const updateProductInfo = expressAsyncHandler(
         barcode: product.barcode,
         name: product.name,
         quantity: product.quantity,
+        weight: product.weight,
         price: product.price,
-
         brand: product.brand,
-
         description: product.description,
         unit_of_measure: product.unit_of_measure,
         expiration: product.expiration,

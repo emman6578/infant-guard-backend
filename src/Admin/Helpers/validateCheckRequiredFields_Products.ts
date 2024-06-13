@@ -19,6 +19,7 @@ const requiredFieldsProducts: string[] = [
   "barcode",
   "name",
   "quantity",
+  "weight",
   "price",
   "Category",
   "brand",

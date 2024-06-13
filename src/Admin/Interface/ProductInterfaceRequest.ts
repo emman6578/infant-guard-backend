@@ -2,6 +2,7 @@ export interface ProductInterface {
   barcode: string;
   name: string;
   quantity: number;
+  weight: number;
   price: number;
   Category: Category[];
   brand: string;
@@ -32,6 +33,7 @@ export enum StockStatus {
 // Define the enum for Measurement
 export enum Measurement {
   KILOGRAMS = "KILOGRAMS",
+  GRAMS = "GRAMS",
   LITERS = "LITERS",
   PIECES = "PIECES",
 }
