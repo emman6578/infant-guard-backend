@@ -13,6 +13,7 @@ export const getCurrentlyLoggedInDriver = expressAsyncHandler(
 
     const allUsers = await prisma.driver.findMany({
       where: { id: driverId },
+      include: { DriverLoad: true },
     });
 
     if (!allUsers) {
@@ -32,7 +33,13 @@ export const getDeliveriesbyDriverLoggedin = expressAsyncHandler(
     const deliveries = await prisma.driverLoad.findMany({
       where: { driver_id: driverId },
       include: {
-        Product: { select: { name: true } },
+        DriverLoadProducts: {
+          include: {
+            Product: {
+              select: { name: true, price: true, wholesale_price: true },
+            },
+          },
+        },
       },
     });
 

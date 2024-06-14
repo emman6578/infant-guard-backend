@@ -31,7 +31,7 @@ model Admin {
   Cart  Cart?
   Order Order[]
 
-  Delivery Delivery[]
+  DriverLoadProducts DriverLoadProducts[]
 }
 
 model Auth {
@@ -89,11 +89,11 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ProductInCart ProductInCart[]
-  Order         Order[]
-  Delivery      Delivery[]
-  DriverLoad    DriverLoad[]
-  DriverSales   DriverSales?    @relation(fields: [driverSalesId], references: [id])
+  ProductInCart      ProductInCart[]
+  DriverLoadProducts DriverLoadProducts[]
+  Order              Order[]
+
+  DriverSales   DriverSales? @relation(fields: [driverSalesId], references: [id])
   driverSalesId String?
 }
 
@@ -161,23 +161,6 @@ model Order {
   updatedAt DateTime @updatedAt
 }
 
-model Delivery {
-  id String @id @default(uuid())
-
-  admin    Admin?  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
-  admin_id String?
-
-  Products              Product[]
-  quantity              Int
-  total                 Float
-  wholesale_price_total Float
-
-  status DeliveryStatus @default(PENDING)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 enum Type {
   EMAIL
   API
@@ -240,21 +223,41 @@ model Driver {
 
   Token Token[]
 
-  DriverLoad  DriverLoad[]
+  DriverLoad  DriverLoad?
   DriverSales DriverSales[]
 }
 
 model DriverLoad {
   id String @id @default(uuid())
 
-  Product                  Product[]
-  total_load_products      Int
-  expected_sales           Float
-  expected_sales_wholesale Float
-  status                   String?
+  DriverLoadProducts       DriverLoadProducts[]
+  total_load_products      Int?
+  expected_sales           Float?
+  expected_sales_wholesale Float?
+  status                   SalesStatus          @default(FORSALE)
 
-  driver    Driver? @relation(fields: [driver_id], references: [id])
-  driver_id String?
+  driver    Driver @relation(fields: [driver_id], references: [id])
+  driver_id String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DriverLoadProducts {
+  id String @id @default(uuid())
+
+  Product    Product? @relation(fields: [product_id], references: [id])
+  product_id String?  @unique
+
+  quantity        Int
+  total           Float
+  wholesale_total Float
+
+  DriverLoad    DriverLoad? @relation(fields: [driverLoad_id], references: [id])
+  driverLoad_id String?
+
+  admin    Admin?  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  admin_id String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -265,8 +268,11 @@ model DriverSales {
 
   Product        Product[]
   sales          Float
-  status         String?
+  status         SalesStatus     @default(SOLD)
   paymentOptions PaymentOptions?
+
+  Customer   Customer? @relation(fields: [customerId], references: [id])
+  customerId String?
 
   driver    Driver? @relation(fields: [driver_id], references: [id])
   driver_id String?
@@ -275,7 +281,25 @@ model DriverSales {
   updatedAt DateTime @updatedAt
 }
 
+model Customer {
+  id String @id @default(uuid())
+
+  name    String
+  address String
+
+  Purchased DriverSales[] //will list of products from delivery load
+  total     Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum PaymentOptions {
   PAY_LATER
   GCASH
+}
+
+enum SalesStatus {
+  FORSALE
+  SOLD
 }

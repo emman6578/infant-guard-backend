@@ -22,8 +22,22 @@ export const driverRegister = expressAsyncHandler(
       },
     });
 
+    const DriverLoad = await prisma.driverLoad.create({
+      data: {
+        driver: {
+          connect: {
+            id: create.id,
+          },
+        },
+      },
+    });
+
     if (!create) {
       throw new Error("Error creating user");
+    }
+
+    if (!DriverLoad) {
+      throw new Error("Error creating driver load");
     }
 
     successHandler(create, res, "POST");
