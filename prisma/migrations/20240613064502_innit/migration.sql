@@ -14,19 +14,6 @@ CREATE TABLE `Admin` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Driver` (
-    `id` VARCHAR(191) NOT NULL,
-    `fullname` VARCHAR(191) NOT NULL,
-    `email` VARCHAR(191) NOT NULL,
-    `image` VARCHAR(191) NULL,
-    `lastLogin` DATETIME(3) NULL,
-    `created` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated` DATETIME(3) NOT NULL,
-
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
 CREATE TABLE `Auth` (
     `id` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NOT NULL,
@@ -46,7 +33,7 @@ CREATE TABLE `Token` (
     `emailToken` VARCHAR(191) NULL,
     `valid` BOOLEAN NOT NULL DEFAULT true,
     `expiration` DATETIME(3) NOT NULL,
-    `admin_id` VARCHAR(191) NOT NULL,
+    `admin_id` VARCHAR(191) NULL,
     `driverId` VARCHAR(191) NULL,
     `created` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated` DATETIME(3) NOT NULL,
@@ -58,13 +45,15 @@ CREATE TABLE `Token` (
 -- CreateTable
 CREATE TABLE `Product` (
     `id` VARCHAR(191) NOT NULL,
-    `barcode` VARCHAR(191) NOT NULL,
+    `barcode` VARCHAR(191) NULL,
     `name` VARCHAR(191) NOT NULL,
     `quantity` INTEGER NOT NULL,
+    `weight` DOUBLE NOT NULL,
     `price` DOUBLE NOT NULL,
+    `wholesale_price` DOUBLE NOT NULL,
     `brand` VARCHAR(191) NOT NULL,
     `description` VARCHAR(191) NOT NULL,
-    `unit_of_measure` ENUM('KILOGRAMS', 'LITERS', 'PIECES') NULL,
+    `unit_of_measure` ENUM('GRAMS', 'KILOGRAMS', 'LITERS', 'PIECES') NULL,
     `expiration` VARCHAR(191) NOT NULL,
     `date_of_manufacture` VARCHAR(191) NOT NULL,
     `date_of_entry` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -74,6 +63,7 @@ CREATE TABLE `Product` (
     `maximum_stock_level` INTEGER NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `driverSalesId` VARCHAR(191) NULL,
 
     UNIQUE INDEX `Product_barcode_key`(`barcode`),
     PRIMARY KEY (`id`)
@@ -135,13 +125,51 @@ CREATE TABLE `Order` (
 -- CreateTable
 CREATE TABLE `Delivery` (
     `id` VARCHAR(191) NOT NULL,
-    `admin_id` VARCHAR(191) NOT NULL,
-    `quantity` INTEGER NOT NULL,
-    `total` DOUBLE NOT NULL,
+    `admin_id` VARCHAR(191) NULL,
+    `quantity` INTEGER NULL,
+    `total` DOUBLE NULL,
     `status` ENUM('PENDING', 'IN_TRANSIT', 'DELIVERED', 'FAILED') NOT NULL DEFAULT 'PENDING',
-    `approval` ENUM('PENDING', 'DISAPPROVED', 'APPROVED') NOT NULL DEFAULT 'PENDING',
-    `total_delivery_quantity` INTEGER NULL,
-    `total_delivery_price` DOUBLE NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Driver` (
+    `id` VARCHAR(191) NOT NULL,
+    `fullname` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NOT NULL,
+    `image` VARCHAR(191) NULL,
+    `truck_number` VARCHAR(191) NULL,
+    `lastLogin` DATETIME(3) NULL,
+    `created` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `Driver_email_key`(`email`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `DriverLoad` (
+    `id` VARCHAR(191) NOT NULL,
+    `total_load_products` INTEGER NOT NULL,
+    `expected_sales` DOUBLE NOT NULL,
+    `status` VARCHAR(191) NULL,
+    `driver_id` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `DriverSales` (
+    `id` VARCHAR(191) NOT NULL,
+    `sales` DOUBLE NOT NULL,
+    `status` VARCHAR(191) NULL,
+    `paymentOptions` ENUM('PAY_LATER', 'GCASH') NULL,
+    `driver_id` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -175,6 +203,15 @@ CREATE TABLE `_DeliveryToProduct` (
     INDEX `_DeliveryToProduct_B_index`(`B`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `_DriverLoadToProduct` (
+    `A` VARCHAR(191) NOT NULL,
+    `B` VARCHAR(191) NOT NULL,
+
+    UNIQUE INDEX `_DriverLoadToProduct_AB_unique`(`A`, `B`),
+    INDEX `_DriverLoadToProduct_B_index`(`B`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- AddForeignKey
 ALTER TABLE `Auth` ADD CONSTRAINT `Auth_admin_id_fkey` FOREIGN KEY (`admin_id`) REFERENCES `Admin`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -183,6 +220,9 @@ ALTER TABLE `Token` ADD CONSTRAINT `Token_admin_id_fkey` FOREIGN KEY (`admin_id`
 
 -- AddForeignKey
 ALTER TABLE `Token` ADD CONSTRAINT `Token_driverId_fkey` FOREIGN KEY (`driverId`) REFERENCES `Driver`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Product` ADD CONSTRAINT `Product_driverSalesId_fkey` FOREIGN KEY (`driverSalesId`) REFERENCES `DriverSales`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Cart` ADD CONSTRAINT `Cart_admin_id_fkey` FOREIGN KEY (`admin_id`) REFERENCES `Admin`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -198,6 +238,12 @@ ALTER TABLE `Order` ADD CONSTRAINT `Order_admin_id_fkey` FOREIGN KEY (`admin_id`
 
 -- AddForeignKey
 ALTER TABLE `Delivery` ADD CONSTRAINT `Delivery_admin_id_fkey` FOREIGN KEY (`admin_id`) REFERENCES `Admin`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `DriverLoad` ADD CONSTRAINT `DriverLoad_driver_id_fkey` FOREIGN KEY (`driver_id`) REFERENCES `Driver`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `DriverSales` ADD CONSTRAINT `DriverSales_driver_id_fkey` FOREIGN KEY (`driver_id`) REFERENCES `Driver`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `_CategoryToProduct` ADD CONSTRAINT `_CategoryToProduct_A_fkey` FOREIGN KEY (`A`) REFERENCES `Category`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -216,3 +262,9 @@ ALTER TABLE `_DeliveryToProduct` ADD CONSTRAINT `_DeliveryToProduct_A_fkey` FORE
 
 -- AddForeignKey
 ALTER TABLE `_DeliveryToProduct` ADD CONSTRAINT `_DeliveryToProduct_B_fkey` FOREIGN KEY (`B`) REFERENCES `Product`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `_DriverLoadToProduct` ADD CONSTRAINT `_DriverLoadToProduct_A_fkey` FOREIGN KEY (`A`) REFERENCES `DriverLoad`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `_DriverLoadToProduct` ADD CONSTRAINT `_DriverLoadToProduct_B_fkey` FOREIGN KEY (`B`) REFERENCES `Product`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

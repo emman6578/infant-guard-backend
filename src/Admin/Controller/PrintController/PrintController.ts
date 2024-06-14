@@ -35,16 +35,17 @@ const createExcelFile = async (products: any[], filePath: string) => {
     { header: "Weight", key: "weight" }, //5
     { header: "Unit of Measure", key: "unit_of_measure" }, //6
     { header: "Price", key: "price" }, //7
-    { header: "Brand", key: "brand" }, //8
-    { header: "Description", key: "description" }, //9
-    { header: "Category", key: "category" }, //10
-    { header: "Supplier", key: "supplier" }, //11
-    { header: "Stock Status", key: "stock_status" }, //12
-    { header: "Minimum Stock Level", key: "minimum_stock_level" }, //13
-    { header: "Maximum Stock Level", key: "maximum_stock_level" }, //14
-    { header: "Expiration", key: "expiration" }, //15
-    { header: "Date of Manufacture", key: "date_of_manufacture" }, //16
-    { header: "Date of Entry", key: "date_of_entry" }, //17
+    { header: "Wholesale Price", key: "wholesale_price" }, //8
+    { header: "Brand", key: "brand" }, //9
+    { header: "Description", key: "description" }, //10
+    { header: "Category", key: "category" }, //11
+    { header: "Supplier", key: "supplier" }, //12
+    { header: "Stock Status", key: "stock_status" }, //13
+    { header: "Minimum Stock Level", key: "minimum_stock_level" }, //14
+    { header: "Maximum Stock Level", key: "maximum_stock_level" }, //15
+    { header: "Expiration", key: "expiration" }, //16
+    { header: "Date of Manufacture", key: "date_of_manufacture" }, //17
+    { header: "Date of Entry", key: "date_of_entry" }, //18
   ];
   worksheet.columns = columns;
 
@@ -57,7 +58,7 @@ const createExcelFile = async (products: any[], filePath: string) => {
 
   // Add data validation for the "Stock Status" column
   worksheet
-    .getColumn(12)
+    .getColumn(13)
     .eachCell({ includeEmpty: true }, (cell, rowNumber) => {
       if (rowNumber > 1) {
         // Skip the header row
@@ -119,6 +120,7 @@ const readExcelFile = async (filePath: string) => {
       weight?: number;
       unit_of_measure?: Measurement;
       price?: number;
+      wholesale_price: number;
       brand?: string;
       description?: string;
       supplier?: string;
@@ -140,12 +142,13 @@ const readExcelFile = async (filePath: string) => {
         weight: row.getCell(5).value as number,
         unit_of_measure: row.getCell(6).value as Measurement,
         price: row.getCell(7).value as number,
-        brand: row.getCell(8).value?.toString(),
-        description: row.getCell(9).value?.toString(),
-        supplier: row.getCell(11).value as StockStatus,
-        stock_status: row.getCell(12).value as StockStatus,
-        minimum_stock_level: row.getCell(13).value as number,
-        maximum_stock_level: row.getCell(14).value as number,
+        wholesale_price: row.getCell(8).value as number,
+        brand: row.getCell(9).value?.toString(),
+        description: row.getCell(10).value?.toString(),
+        supplier: row.getCell(12).value as StockStatus,
+        stock_status: row.getCell(13).value as StockStatus,
+        minimum_stock_level: row.getCell(14).value as number,
+        maximum_stock_level: row.getCell(15).value as number,
       };
     }
   });
@@ -161,6 +164,7 @@ const updateProductsInDatabase = async (productsToUpdate: {
     weight?: number;
     unit_of_measure?: Measurement;
     price?: number;
+    wholesale_price?: number;
     brand?: string;
     description?: string;
     supplier?: string;
@@ -178,6 +182,7 @@ const updateProductsInDatabase = async (productsToUpdate: {
       weight: data.weight,
       unit_of_measure: data.unit_of_measure,
       price: data.price,
+      wholesale_price: data.wholesale_price,
       brand: data.brand,
       description: data.description,
       stock_status: data.stock_status,
@@ -267,7 +272,7 @@ export const listFileInDownloadsFolder = expressAsyncHandler(
     const generateDownloadToken = generateToken(admin);
 
     try {
-      const directoryPath = path.join(__dirname, "../../../Download");
+      const directoryPath = path.join(__dirname, "../../../../Download");
       const files = fs.readdirSync(directoryPath);
       const excelFiles = files.filter((file) => file.endsWith(".xlsx"));
       // You can send the list of files as a response
@@ -292,7 +297,7 @@ export const download = expressAsyncHandler(
 
       const filePath = path.join(
         __dirname,
-        "../../../Download",
+        "../../../../Download",
         req.params.filename
       );
       if (!fs.existsSync(filePath)) {
@@ -346,7 +351,10 @@ export const printBySupplier = expressAsyncHandler(
 
       const directoryPath = path.join(__dirname, "../../../../Download");
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const filePath = path.join(directoryPath, `products_${timestamp}.xlsx`);
+      const filePath = path.join(
+        directoryPath,
+        `products_by_supplier_${timestamp}.xlsx`
+      );
 
       await createExcelFile(products, filePath);
 

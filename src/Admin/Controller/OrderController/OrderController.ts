@@ -33,6 +33,10 @@ export const createOrder = expressAsyncHandler(
 
     // Calculate total price and quantity
     const total = productInCarts.reduce((acc, item) => acc + item.total, 0);
+    const totalWholesalePrice = productInCarts.reduce(
+      (acc, item) => acc + item.wholesale_price_total,
+      0
+    );
     const quantity = productInCarts.reduce(
       (acc, item) => acc + item.quantity,
       0
@@ -46,6 +50,7 @@ export const createOrder = expressAsyncHandler(
     const newOrder = await prisma.order.create({
       data: {
         total,
+        wholesale_price_total: totalWholesalePrice,
         payment_status: "PROCESSING", // Default status, can be modified as needed
         quantity,
         status,

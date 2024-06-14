@@ -21,6 +21,7 @@ const requiredFieldsProducts: string[] = [
   "quantity",
   "weight",
   "price",
+  "wholesale_price",
   "Category",
   "brand",
   "description",

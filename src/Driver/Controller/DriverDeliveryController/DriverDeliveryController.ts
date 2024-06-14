@@ -23,28 +23,19 @@ export const getCurrentlyLoggedInDriver = expressAsyncHandler(
   }
 );
 
-// export const ViewDelivery = expressAsyncHandler(
-//   async (req: AuthRequest, res: Response) => {
-//     const driverId = req.driver?.id;
+//must fetch this from the delivery load
 
-//     const delivery = await prisma.delivery.findMany({
-//       where: { driver_id: driverId },
-//       include: {
-//         Products: {
-//           include: { product: { include: { Product_Info: true } } },
-//         },
-//         driver: true,
-//       },
-//     });
+export const getDeliveriesbyDriverLoggedin = expressAsyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const driverId = req.driver?.id;
+    // Fetch all deliveries for the given admin
+    const deliveries = await prisma.driverLoad.findMany({
+      where: { driver_id: driverId },
+      include: {
+        Product: { select: { name: true } },
+      },
+    });
 
-//     if (!delivery) {
-//       throw new Error(`Error Getting Delivery`);
-//     }
-
-//     successHandler(delivery, res, "GET");
-//   }
-// );
-
-export const ApprovedInventory = expressAsyncHandler(
-  async (req: Request, res: Response) => {}
+    successHandler(deliveries, res, "GET");
+  }
 );

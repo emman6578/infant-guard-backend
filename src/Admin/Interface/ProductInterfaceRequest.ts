@@ -4,6 +4,7 @@ export interface ProductInterface {
   quantity: number;
   weight: number;
   price: number;
+  wholesale_price: number;
   Category: Category[];
   brand: string;
 

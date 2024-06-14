@@ -72,6 +72,7 @@ model Product {
   quantity            Int
   weight              Float
   price               Float
+  wholesale_price     Float
   Category            Category[]
   brand               String
   description         String
@@ -91,6 +92,9 @@ model Product {
   ProductInCart ProductInCart[]
   Order         Order[]
   Delivery      Delivery[]
+  DriverLoad    DriverLoad[]
+  DriverSales   DriverSales?    @relation(fields: [driverSalesId], references: [id])
+  driverSalesId String?
 }
 
 model Category {
@@ -107,8 +111,9 @@ model Category {
 model Cart {
   id String @id @default(uuid())
 
-  ProductInCart ProductInCart[]
-  total_price   Float?
+  ProductInCart   ProductInCart[]
+  total_price     Float?
+  wholesale_price Float?
 
   admin    Admin  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
   admin_id String @unique
@@ -123,9 +128,10 @@ model ProductInCart {
   product    Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
   product_id String
 
-  quantity Int
-  total    Float
-  status   Status?
+  quantity              Int
+  total                 Float
+  wholesale_price_total Float
+  status                Status?
 
   cart    Cart   @relation(fields: [cart_id], references: [id], onDelete: Cascade)
   cart_id String
@@ -139,11 +145,12 @@ model ProductInCart {
 model Order {
   id String @id @default(uuid())
 
-  total          Float //base on the product get in the product in cart calculate the total order
-  payment_status PaymentStatus?
-  quantity       Int //this quntatity is getting from the ProductinCart
-  status         Status? //also for status fetch first the product in cart to get the status
-  address        String
+  total                 Float //base on the product get in the product in cart calculate the total order
+  wholesale_price_total Float //base on the product get in the product in cart calculate the total order
+  payment_status        PaymentStatus?
+  quantity              Int //this quntatity is getting from the ProductinCart
+  status                Status? //also for status fetch first the product in cart to get the status
+  address               String
 
   admin    Admin  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
   admin_id String
@@ -160,18 +167,12 @@ model Delivery {
   admin    Admin?  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
   admin_id String?
 
-  Products Product[]
-  quantity Int?
-  total    Float?
+  Products              Product[]
+  quantity              Int
+  total                 Float
+  wholesale_price_total Float
 
-  status   DeliveryStatus @default(PENDING)
-  approval Approval       @default(PENDING)
-
-  total_delivery_quantity Int?
-  total_delivery_price    Float?
-
-  driver    Driver? @relation(fields: [driver_id], references: [id])
-  driver_id String?
+  status DeliveryStatus @default(PENDING)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -228,15 +229,53 @@ enum Approval {
 model Driver {
   id String @id @default(uuid())
 
-  fullname String
-  email    String  @unique
-  image    String?
-
-  lastLogin DateTime?
+  fullname     String
+  email        String    @unique
+  image        String?
+  truck_number String?
+  lastLogin    DateTime?
 
   created DateTime @default(now())
   updated DateTime @updatedAt
 
-  Token    Token[]
-  Delivery Delivery[]
+  Token Token[]
+
+  DriverLoad  DriverLoad[]
+  DriverSales DriverSales[]
+}
+
+model DriverLoad {
+  id String @id @default(uuid())
+
+  Product                  Product[]
+  total_load_products      Int
+  expected_sales           Float
+  expected_sales_wholesale Float
+  status                   String?
+
+  driver    Driver? @relation(fields: [driver_id], references: [id])
+  driver_id String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DriverSales {
+  id String @id @default(uuid())
+
+  Product        Product[]
+  sales          Float
+  status         String?
+  paymentOptions PaymentOptions?
+
+  driver    Driver? @relation(fields: [driver_id], references: [id])
+  driver_id String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum PaymentOptions {
+  PAY_LATER
+  GCASH
 }

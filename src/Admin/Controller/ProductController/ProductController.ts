@@ -53,6 +53,7 @@ export const addProduct = expressAsyncHandler(
         weight: product.weight,
         unit_of_measure: product.unit_of_measure,
         price: product.price,
+        wholesale_price: product.wholesale_price,
         Category: {
           connect: categories,
         },

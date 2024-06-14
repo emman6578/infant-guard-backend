@@ -52,7 +52,9 @@ export const add = expressAsyncHandler(
 
       // Calculate the total price for the product based on quantity
       const price = product.price;
+      const wholesale_price = product.wholesale_price;
       const total = price! * quantity;
+      const totalWholesalePrice = wholesale_price! * quantity;
 
       // Check if the product is already in the cart
       const existingProductInCart = await prisma.productInCart.findFirst({
@@ -69,6 +71,8 @@ export const add = expressAsyncHandler(
           data: {
             quantity: existingProductInCart.quantity + quantity,
             total: existingProductInCart.total + total,
+            wholesale_price_total:
+              existingProductInCart.wholesale_price_total + totalWholesalePrice,
           },
         });
       } else {
@@ -77,6 +81,7 @@ export const add = expressAsyncHandler(
           data: {
             quantity,
             total,
+            wholesale_price_total: totalWholesalePrice,
             product: { connect: { id: product_id } },
             cart: { connect: { id: userCart.Cart?.id } },
             status: "ACTIVE",
@@ -101,12 +106,17 @@ export const add = expressAsyncHandler(
       return sum + cartProduct.total;
     }, 0);
 
+    const totalPrice_wholesale = cartProducts.reduce((sum, cartProduct) => {
+      return sum + cartProduct.wholesale_price_total;
+    }, 0);
+
     try {
       // Update the cart with the new total price and set payment status to unpaid
       await prisma.cart.update({
         where: { id: cartId },
         data: {
           total_price: totalPrice,
+          wholesale_price: totalPrice_wholesale,
         },
       });
     } catch (error) {
@@ -163,6 +173,7 @@ export const getCart = expressAsyncHandler(
               product_id: product.id,
               quantity: product.quantity, // Add the entire available quantity
               total: product.quantity * product.price, // Calculate the total price
+              wholesale_price_total: product.quantity * product.wholesale_price,
               status: "ACTIVE",
             },
           });
