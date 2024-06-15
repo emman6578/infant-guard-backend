@@ -19,6 +19,8 @@ export const addToDelivery = expressAsyncHandler(
       throw new Error("User ID is required");
     }
 
+    // Check if any of the productInCartIds already exist for the given driverId
+
     // Fetch products in the cart to add to delivery
     const productInCarts = await prisma.productInCart.findMany({
       where: {
@@ -54,26 +56,40 @@ export const addToDelivery = expressAsyncHandler(
     // Create DriverLoadProducts records based on productDetails
     const createdDriverLoadProducts = await Promise.all(
       productDetails.map(async (detail) => {
-        const createdProduct = await prisma.driverLoadProducts.create({
-          data: {
-            Product: {
-              connect: { id: detail.productId },
+        try {
+          const createdProduct = await prisma.driverLoadProducts.create({
+            data: {
+              Product: {
+                connect: { id: detail.productId },
+              },
+              quantity: detail.quantity,
+              total: detail.total,
+              wholesale_total: detail.wholesalePriceTotal,
+              DriverLoad: {
+                connect: { driver_id: driverId },
+              },
+              admin: {
+                connect: { id: adminId },
+              },
             },
-            quantity: detail.quantity,
-            total: detail.total,
-            wholesale_total: detail.wholesalePriceTotal,
-            DriverLoad: {
-              connect: { driver_id: driverId },
-            },
-            admin: {
-              connect: { id: adminId },
-            },
-          },
-        });
-        return createdProduct;
+          });
+          return createdProduct;
+        } catch (error: any) {
+          if (error.code === "P2002") {
+            // Handle uniqueness constraint violation
+            throw new Error(
+              `Product ID ${detail.productId} already exists in DriverLoadProducts.`
+            );
+          }
+          throw error;
+        }
       })
     );
 
+    // Check if createdDriverLoadProducts is falsy or empty
+    if (!createdDriverLoadProducts || createdDriverLoadProducts.length === 0) {
+      throw new Error("Failed to create DriverLoadProducts.");
+    }
     // Calculate aggregated values
     const totalLoadProducts = productDetails.reduce(
       (acc, detail) => acc + detail.quantity,
@@ -106,77 +122,9 @@ export const getDeliveries = expressAsyncHandler(
   async (req: Request, res: Response) => {
     // Fetch all deliveries for the given admin
     const deliveries = await prisma.driverLoad.findMany({
-      select: {
-        id: true,
-        status: true,
-        DriverLoadProducts: true,
-      },
+      include: { DriverLoadProducts: true },
     });
 
     successHandler(deliveries, res, "GET");
   }
 );
-
-// export const receipt = expressAsyncHandler(
-//   async (req: Request, res: Response) => {
-//     // Fetch all deliveries with the required fields
-//     const deliveries = await prisma.delivery.findMany({
-//       select: {
-//         id: true,
-//         quantity: true,
-//         total: true,
-//         wholesale_price_total: true,
-//         status: true,
-//         Products: {
-//           select: {
-//             id: true,
-//             name: true,
-//           },
-//         },
-//       },
-//     });
-
-//     // Group and aggregate the deliveries by product id
-//     const groupedDeliveries = deliveries.reduce(
-//       (acc, delivery) => {
-//         delivery.Products.forEach((product) => {
-//           const productId = product.id;
-//           if (!acc[productId]) {
-//             acc[productId] = {
-//               quantity: 0,
-//               total: 0,
-//               wholesale_price_total: 0,
-//               status: delivery.status,
-//               Products: [{ name: product.name }],
-//             };
-//           }
-//           acc[productId].quantity += delivery.quantity;
-//           acc[productId].total = parseFloat(
-//             (acc[productId].total + delivery.total).toFixed(2)
-//           );
-//           acc[productId].wholesale_price_total = parseFloat(
-//             (
-//               acc[productId].wholesale_price_total +
-//               delivery.wholesale_price_total
-//             ).toFixed(2)
-//           );
-//         });
-//         return acc;
-//       },
-//       {} as Record<
-//         string,
-//         {
-//           quantity: number;
-//           total: number;
-//           wholesale_price_total: number;
-//           status: string;
-//           Products: { name: string }[];
-//         }
-//       >
-//     );
-
-//     const result = Object.values(groupedDeliveries);
-
-//     successHandler(result, res, "GET");
-//   }
-// );

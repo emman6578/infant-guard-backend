@@ -15,6 +15,7 @@ import DeliveryRoutes from "./Admin/Routes/DeliveryRoutes";
 //driver route import
 import DriverAuth from "./Driver/Routes/DriverAuthRoutes";
 import DriverDelivery from "./Driver/Routes/DriverDeliveryRoutes";
+import Customer from "./Driver/Routes/CustomerRoutes";
 
 //error handler midddlewares
 import { errorHandler, notFound } from "./Admin/Middleware/ErrorHandler";
@@ -40,6 +41,7 @@ server.use("/api/delivery", DeliveryRoutes);
 //driver routes
 server.use("/api/driver/auth", DriverAuth);
 server.use("/api/driver/delivery", DriverDelivery);
+server.use("/api/driver/customer", Customer);
 
 //error handler middleware
 server.use(notFound);

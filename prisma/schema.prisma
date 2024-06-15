@@ -93,8 +93,7 @@ model Product {
   DriverLoadProducts DriverLoadProducts[]
   Order              Order[]
 
-  DriverSales   DriverSales? @relation(fields: [driverSalesId], references: [id])
-  driverSalesId String?
+  DriverSales DriverSales[]
 }
 
 model Category {
@@ -236,8 +235,8 @@ model DriverLoad {
   expected_sales_wholesale Float?
   status                   SalesStatus          @default(FORSALE)
 
-  driver    Driver @relation(fields: [driver_id], references: [id])
-  driver_id String @unique
+  driver    Driver? @relation(fields: [driver_id], references: [id])
+  driver_id String? @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -247,7 +246,7 @@ model DriverLoadProducts {
   id String @id @default(uuid())
 
   Product    Product? @relation(fields: [product_id], references: [id])
-  product_id String?  @unique
+  product_id String?
 
   quantity        Int
   total           Float
@@ -266,7 +265,9 @@ model DriverLoadProducts {
 model DriverSales {
   id String @id @default(uuid())
 
-  Product        Product[]
+  Product    Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  product_id String
+
   sales          Float
   status         SalesStatus     @default(SOLD)
   paymentOptions PaymentOptions?
@@ -288,7 +289,7 @@ model Customer {
   address String
 
   Purchased DriverSales[] //will list of products from delivery load
-  total     Float
+  total     Float?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

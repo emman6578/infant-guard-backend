@@ -63,7 +63,6 @@ CREATE TABLE `Product` (
     `maximum_stock_level` INTEGER NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
-    `driverSalesId` VARCHAR(191) NULL,
 
     UNIQUE INDEX `Product_barcode_key`(`barcode`),
     PRIMARY KEY (`id`)
@@ -147,8 +146,7 @@ CREATE TABLE `DriverLoad` (
     `expected_sales` DOUBLE NULL,
     `expected_sales_wholesale` DOUBLE NULL,
     `status` ENUM('FORSALE', 'SOLD') NOT NULL DEFAULT 'FORSALE',
-    `driver_id` VARCHAR(191) NOT NULL,
-    `admin_id` VARCHAR(191) NULL,
+    `driver_id` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -164,16 +162,17 @@ CREATE TABLE `DriverLoadProducts` (
     `total` DOUBLE NOT NULL,
     `wholesale_total` DOUBLE NOT NULL,
     `driverLoad_id` VARCHAR(191) NULL,
+    `admin_id` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `DriverLoadProducts_product_id_key`(`product_id`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `DriverSales` (
     `id` VARCHAR(191) NOT NULL,
+    `product_id` VARCHAR(191) NOT NULL,
     `sales` DOUBLE NOT NULL,
     `status` ENUM('FORSALE', 'SOLD') NOT NULL DEFAULT 'SOLD',
     `paymentOptions` ENUM('PAY_LATER', 'GCASH') NULL,
@@ -190,7 +189,7 @@ CREATE TABLE `Customer` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `address` VARCHAR(191) NOT NULL,
-    `total` DOUBLE NOT NULL,
+    `total` DOUBLE NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -225,9 +224,6 @@ ALTER TABLE `Token` ADD CONSTRAINT `Token_admin_id_fkey` FOREIGN KEY (`admin_id`
 ALTER TABLE `Token` ADD CONSTRAINT `Token_driverId_fkey` FOREIGN KEY (`driverId`) REFERENCES `Driver`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Product` ADD CONSTRAINT `Product_driverSalesId_fkey` FOREIGN KEY (`driverSalesId`) REFERENCES `DriverSales`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `Cart` ADD CONSTRAINT `Cart_admin_id_fkey` FOREIGN KEY (`admin_id`) REFERENCES `Admin`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -240,16 +236,19 @@ ALTER TABLE `ProductInCart` ADD CONSTRAINT `ProductInCart_cart_id_fkey` FOREIGN 
 ALTER TABLE `Order` ADD CONSTRAINT `Order_admin_id_fkey` FOREIGN KEY (`admin_id`) REFERENCES `Admin`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `DriverLoad` ADD CONSTRAINT `DriverLoad_driver_id_fkey` FOREIGN KEY (`driver_id`) REFERENCES `Driver`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `DriverLoad` ADD CONSTRAINT `DriverLoad_admin_id_fkey` FOREIGN KEY (`admin_id`) REFERENCES `Admin`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `DriverLoad` ADD CONSTRAINT `DriverLoad_driver_id_fkey` FOREIGN KEY (`driver_id`) REFERENCES `Driver`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `DriverLoadProducts` ADD CONSTRAINT `DriverLoadProducts_product_id_fkey` FOREIGN KEY (`product_id`) REFERENCES `Product`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `DriverLoadProducts` ADD CONSTRAINT `DriverLoadProducts_driverLoad_id_fkey` FOREIGN KEY (`driverLoad_id`) REFERENCES `DriverLoad`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `DriverLoadProducts` ADD CONSTRAINT `DriverLoadProducts_admin_id_fkey` FOREIGN KEY (`admin_id`) REFERENCES `Admin`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `DriverSales` ADD CONSTRAINT `DriverSales_product_id_fkey` FOREIGN KEY (`product_id`) REFERENCES `Product`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `DriverSales` ADD CONSTRAINT `DriverSales_customerId_fkey` FOREIGN KEY (`customerId`) REFERENCES `Customer`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
