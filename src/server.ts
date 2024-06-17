@@ -19,6 +19,7 @@ import Customer from "./Driver/Routes/CustomerRoutes";
 
 //error handler midddlewares
 import { errorHandler, notFound } from "./Admin/Middleware/ErrorHandler";
+import { bodyParserMiddleware, loggerMiddleware } from "./logger";
 
 const server = express();
 dotenv.config();
@@ -28,6 +29,9 @@ const PORT = process.env.PORT || 3006;
 server.use(helmet());
 server.use(cors());
 server.use(express.json());
+
+server.use(loggerMiddleware);
+server.use(bodyParserMiddleware);
 
 //admin routes
 server.use("/api/auth", AuthRoutes);

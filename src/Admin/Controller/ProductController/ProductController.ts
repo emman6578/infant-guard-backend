@@ -1,14 +1,12 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { successHandler } from "../../Middleware/ErrorHandler";
-import {
-  Category,
-  ProductInterface,
-} from "../../Interface/ProductInterfaceRequest";
+import { ProductInterface } from "../../Interface/ProductInterfaceRequest";
 import expressAsyncHandler from "express-async-handler";
 import {
   checkRequiredFieldsProducts,
   checkRequiredUpdateFieldsProducts,
+  checkIfEmptyFields,
 } from "../../Helpers/validateCheckRequiredFields_Products";
 import { validateIdParams } from "../../Helpers/validateIdParams";
 
@@ -16,9 +14,10 @@ const prisma = new PrismaClient();
 
 export const addProduct = expressAsyncHandler(
   async (req: Request, res: Response) => {
-    checkRequiredFieldsProducts(req);
-
     const product: ProductInterface = req.body;
+
+    checkRequiredFieldsProducts(req);
+    checkIfEmptyFields(req);
 
     if (
       await prisma.product.findUnique({ where: { barcode: product.barcode } })
@@ -214,16 +213,12 @@ export const deleteProduct = expressAsyncHandler(
       throw new Error("Product not found");
     }
 
-    try {
-      await prisma.product.delete({
-        where: {
-          id: String(id),
-        },
-      });
+    await prisma.product.delete({
+      where: {
+        id: String(id),
+      },
+    });
 
-      successHandler(`Successfully deleted product: ${id}`, res, "DELETE");
-    } catch (error) {
-      throw new Error("Deleting product failed");
-    }
+    successHandler(`Successfully deleted product: ${id}`, res, "DELETE");
   }
 );
