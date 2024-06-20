@@ -11,6 +11,7 @@ const router = Router();
 
 router.get("/", driverAuthenticateToken, getCurrentlyLoggedInDriver);
 router.get("/load", driverAuthenticateToken, getDeliveriesbyDriverLoggedin);
+
 router.get("/products/forsale", driverAuthenticateToken, listOfProductsforSale);
 router.post("/products/addtosale", driverAuthenticateToken, addToSales);
 

@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { Cart, PrismaClient } from "@prisma/client";
 import expressAsyncHandler from "express-async-handler";
 import { AuthRequest } from "../../Middleware/authMiddleware";
 import { successHandler } from "../../Middleware/ErrorHandler";
+import { validateIdParams } from "../../Helpers/validateIdParams";
 
 const prisma = new PrismaClient();
 
@@ -14,6 +15,31 @@ export const add = expressAsyncHandler(
 
     if (!admin) {
       throw new Error("Log in first"); // Ensure user is authenticated
+    }
+
+    if (!Array.isArray(products) || products.length === 0) {
+      throw new Error("Products must be a non-empty array");
+    }
+
+    // Validate the products array
+    for (const product of products) {
+      if (
+        typeof product.product_id !== "string" ||
+        typeof product.quantity !== "number"
+      ) {
+        throw new Error(
+          "Each product must have a valid product_id and quantity"
+        );
+      }
+
+      const allowedFields = ["product_id", "quantity"];
+      const productKeys = Object.keys(product);
+
+      for (const key of productKeys) {
+        if (!allowedFields.includes(key)) {
+          throw new Error(`Invalid field '${key}' in product`);
+        }
+      }
     }
 
     // Retrieve user's cart along with associated products if it exists
@@ -155,6 +181,37 @@ export const getCart = expressAsyncHandler(
       throw new Error("Error getting cart for the user");
     }
 
+    // Send the updated cart data as a success response
+    successHandler(cart, res, "GET");
+  }
+);
+
+export const UpdateCart = expressAsyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const admin = req.admin; // Get the authenticated user from the request
+
+    if (!admin) {
+      throw new Error("Log in first"); // Ensure user is authenticated
+    }
+
+    // Find the user's cart and include products and their info
+    let cart = await prisma.cart.findUnique({
+      where: {
+        admin_id: admin.id,
+      },
+      include: {
+        ProductInCart: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    if (!cart) {
+      throw new Error("Error getting cart for the user");
+    }
+
     // Fetch all products to check their stock levels
     const products = await prisma.product.findMany({});
 
@@ -195,21 +252,49 @@ export const getCart = expressAsyncHandler(
       },
     });
 
-    // Calculate the total price of all products in the cart
-    const totalPrice = cart?.ProductInCart.reduce((sum, cartProduct) => {
-      return sum + cartProduct.total;
-    }, 0);
+    // Calculate the total price of all products in the cart and update prices if necessary
+    let totalPrice = 0;
+    let wholeSalePrice = 0;
+
+    for (const cartProduct of cart!.ProductInCart) {
+      const product = cartProduct.product;
+      const currentTotal = cartProduct.quantity * product.price;
+      const currentWholesaleTotal =
+        cartProduct.quantity * product.wholesale_price;
+
+      // Check if there is a difference in prices and update if necessary
+      if (
+        cartProduct.total !== currentTotal ||
+        cartProduct.wholesale_price_total !== currentWholesaleTotal
+      ) {
+        await prisma.productInCart.update({
+          where: {
+            id: cartProduct.id,
+          },
+          data: {
+            total: currentTotal,
+            wholesale_price_total: currentWholesaleTotal,
+          },
+        });
+        cartProduct.total = currentTotal;
+        cartProduct.wholesale_price_total = currentWholesaleTotal;
+      }
+
+      totalPrice += cartProduct.total;
+      wholeSalePrice += cartProduct.wholesale_price_total;
+    }
 
     // Update the cart with the new total price
     await prisma.cart.update({
-      where: { id: cart?.id },
+      where: { id: cart!.id },
       data: {
         total_price: totalPrice,
+        wholesale_price: wholeSalePrice,
       },
     });
 
     // Send the updated cart data as a success response
-    successHandler(cart, res, "GET");
+    successHandler(cart, res, "POST");
   }
 );
 
@@ -273,5 +358,101 @@ export const deleteInCart = expressAsyncHandler(
       res,
       "DELETE"
     );
+  }
+);
+
+export const updateProductInCartQuantity = expressAsyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const admin = req.admin; // Get the authenticated user from the request
+    const { id } = req.params; // Get the productInCart ID from the request params
+    const { quantity } = req.body; // Get the new quantity from the request body
+
+    if (!admin) {
+      throw new Error("Log in first"); // Ensure user is authenticated
+    }
+
+    // Validate that id is a string and is a valid UUID
+    if (typeof id !== "string" || !validateIdParams(id)) {
+      throw new Error("Invalid product ID format");
+    }
+
+    if (typeof quantity !== "number" || quantity <= 0) {
+      throw new Error("Quantity must be a positive number");
+    }
+
+    // Find the user's cart and include products in the cart
+    const cart = await prisma.cart.findUnique({
+      where: {
+        admin_id: admin.id,
+      },
+      include: {
+        ProductInCart: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    if (!cart) {
+      throw new Error("Error getting cart for the user");
+    }
+
+    const productInCart = cart.ProductInCart.find((pic) => pic.id === id);
+
+    if (!productInCart) {
+      throw new Error(`ProductInCart with id ${id} not found in user's cart`);
+    }
+
+    // Find the product in the database
+    const product = await prisma.product.findUnique({
+      where: { id: productInCart.product_id },
+    });
+
+    if (!product) {
+      throw new Error(
+        `Product with id ${productInCart.product_id} does not exist`
+      );
+    }
+
+    // Calculate the new total price for the product based on the updated quantity
+    const newTotal = product.price! * quantity;
+    const newWholesaleTotal = product.wholesale_price! * quantity;
+
+    // Update the productInCart with the new quantity and totals
+    await prisma.productInCart.update({
+      where: { id: productInCart.id },
+      data: {
+        quantity,
+        total: newTotal,
+        wholesale_price_total: newWholesaleTotal,
+      },
+    });
+
+    // Calculate the total price of all products in the cart
+    const cartProducts = await prisma.productInCart.findMany({
+      where: { cart_id: cart.id },
+      include: { product: true },
+    });
+
+    const totalPrice = cartProducts.reduce((sum, cartProduct) => {
+      return sum + cartProduct.total;
+    }, 0);
+
+    const totalPrice_wholesale = cartProducts.reduce((sum, cartProduct) => {
+      return sum + cartProduct.wholesale_price_total;
+    }, 0);
+
+    // Update the cart with the new total price
+    await prisma.cart.update({
+      where: { id: cart.id },
+      data: {
+        total_price: totalPrice,
+        wholesale_price: totalPrice_wholesale,
+      },
+    });
+
+    // Send a success response
+    successHandler("Successfully updated the quantity", res, "PUT");
   }
 );

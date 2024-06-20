@@ -248,9 +248,7 @@ model DriverLoadProducts {
   Product    Product? @relation(fields: [product_id], references: [id])
   product_id String?
 
-  quantity        Int
-  total           Float
-  wholesale_total Float
+  quantity Int
 
   DriverLoad    DriverLoad? @relation(fields: [driverLoad_id], references: [id])
   driverLoad_id String?
@@ -269,8 +267,12 @@ model DriverSales {
   product_id String
 
   sales          Float
+  saleType       SaleType?
+  quantity       Float?
   status         SalesStatus     @default(SOLD)
   paymentOptions PaymentOptions?
+  paymentStatus  PaymentStatus?
+  balance        Float           @default(0)
 
   Customer   Customer? @relation(fields: [customerId], references: [id])
   customerId String?
@@ -298,6 +300,12 @@ model Customer {
 enum PaymentOptions {
   PAY_LATER
   GCASH
+  CASH
+}
+
+enum SaleType {
+  WHOLESALE
+  RETAIL
 }
 
 enum SalesStatus {

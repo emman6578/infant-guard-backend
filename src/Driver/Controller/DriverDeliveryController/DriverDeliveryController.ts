@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import expressAsyncHandler from "express-async-handler";
 import { successHandler } from "../../Middleware/ErrorHandler";
 import { AuthRequest } from "../../Middleware/DriverAuthMiddleware";
+import { validateIdParams } from "../../Helpers/validateIdParams";
 
 const prisma = new PrismaClient();
 
@@ -24,23 +25,12 @@ export const getCurrentlyLoggedInDriver = expressAsyncHandler(
   }
 );
 
-//must fetch this from the delivery load
-
 export const getDeliveriesbyDriverLoggedin = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
     const driverId = req.driver?.id;
     // Fetch all deliveries for the given admin
     const deliveries = await prisma.driverLoad.findMany({
       where: { driver_id: driverId },
-      include: {
-        DriverLoadProducts: {
-          include: {
-            Product: {
-              select: { name: true, price: true, wholesale_price: true },
-            },
-          },
-        },
-      },
     });
 
     successHandler(deliveries, res, "GET");
@@ -57,8 +47,6 @@ export const listOfProductsforSale = expressAsyncHandler(
         DriverLoadProducts: {
           select: {
             quantity: true,
-            total: true,
-            wholesale_total: true,
             Product: {
               select: {
                 id: true,
@@ -75,35 +63,6 @@ export const listOfProductsforSale = expressAsyncHandler(
     successHandler(deliveries, res, "GET");
   }
 );
-
-/*
-      Steps
-
-      First from req.body
-        {
-          products:[
-          product_id:product id here,
-          quantity: 10
-          ],
-
-          customerid: customerid here,
-          saleType: identify if wholesale price or regular price
-          paymentOptions: "GCASH","PAY_LATER"
-               
-
-        }
-
-        Logic:
-
-        1. after getting the product id and quantity in the request body
-        2. fetch the deliveryload based on the driverId check if the product exist in the deliveryloadproducts
-        3. after that recalculate the quantity,total,wholesale_total in the deliveryloadproducts
-
-        note: the saletype is only there because that is the basis of whether you get the regular price or wholesale_price this is to identify where to deduct
-       
-        
-
-    */
 
 export const addToSales = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -131,37 +90,89 @@ export const addToSales = expressAsyncHandler(
         (p) => p.product_id === product_id
       );
 
+      // Validate products
+      if (
+        !Array.isArray(products) ||
+        products.some(
+          ({ product_id, quantity }) =>
+            !validateIdParams(product_id) || typeof quantity !== "number"
+        )
+      ) {
+        res.status(400);
+        throw new Error(
+          "Invalid products format or invalid product id or quantity"
+        );
+      }
+
+      // Validate customer ID
+      if (!validateIdParams(customerid)) {
+        res.status(400);
+        throw new Error("Invalid customer ID");
+      }
+
+      // Validate saleType
+      if (!["WHOLESALE", "RETAIL"].includes(saleType)) {
+        res.status(400);
+        throw new Error("Invalid sale type");
+      }
+
+      // Validate paymentOptions
+      if (!["CASH", "PAY_LATER", "GCASH"].includes(paymentOptions)) {
+        res.status(400);
+        throw new Error("Invalid payment option");
+      }
+
+      let ProductName;
+
+      if (!driverLoadProduct) {
+        const product = await prisma.product.findUnique({
+          where: { id: product_id },
+          select: { name: true },
+        });
+        ProductName = product ? product.name : `ID ${product_id}`;
+        res.status(404);
+        throw new Error(`Product ${ProductName} not found in driver load`);
+      }
+
       if (!driverLoadProduct) {
         res.status(404);
         throw new Error(
-          `Product with ID ${product_id} not found in driver load`
+          `Product with ID ${ProductName} not found in driver load`
         );
       }
 
       if (driverLoadProduct.quantity < quantity) {
         res.status(400);
-        throw new Error(`Insufficient quantity for product ID ${product_id}`);
+        throw new Error(
+          `Insufficient quantity for product ID ${driverLoadProduct.Product?.name}`
+        );
       }
 
       const productPrice =
-        saleType === "wholesale"
+        saleType === "WHOLESALE"
           ? driverLoadProduct.Product!.wholesale_price
           : driverLoadProduct.Product!.price;
 
+      const paymentStatus =
+        paymentOptions === "PAY_LATER"
+          ? "UNPAID"
+          : paymentOptions === "GCASH"
+          ? "PROCESSING"
+          : "PAID";
+
       const totalSale = productPrice * quantity;
+
+      let balance;
+      if (paymentOptions === "PAY_LATER" || paymentOptions === "GCASH") {
+        balance = totalSale;
+      } else {
+        balance = 0;
+      }
 
       await prisma.driverLoadProducts.update({
         where: { id: driverLoadProduct.id },
         data: {
           quantity: driverLoadProduct.quantity - quantity,
-          total:
-            saleType === "wholesale"
-              ? driverLoadProduct.total
-              : driverLoadProduct.total - totalSale,
-          wholesale_total:
-            saleType === "wholesale"
-              ? driverLoadProduct.wholesale_total - totalSale
-              : driverLoadProduct.wholesale_total,
         },
       });
 
@@ -169,6 +180,10 @@ export const addToSales = expressAsyncHandler(
         data: {
           product_id,
           sales: totalSale,
+          saleType: saleType,
+          paymentStatus,
+          balance,
+          quantity,
           status: "SOLD",
           paymentOptions,
           customerId: customerid,

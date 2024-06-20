@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import expressAsyncHandler from "express-async-handler";
 import { AuthRequest } from "../../Middleware/authMiddleware";
 import { successHandler } from "../../Middleware/ErrorHandler";
+import { validateIdParams } from "../../Helpers/validateIdParams";
 
 const prisma = new PrismaClient();
 
@@ -14,6 +15,16 @@ export const createOrder = expressAsyncHandler(
     const adminId = req.admin?.id;
     if (!adminId) {
       throw new Error("User ID is required");
+    }
+
+    // Check if productInCartIds is an array
+    if (!Array.isArray(productInCartIds)) {
+      throw new Error("productInCartIds must be an array");
+    }
+
+    // Check if all elements in productInCartIds are valid UUIDs
+    if (productInCartIds.some((id: string) => !validateIdParams(id))) {
+      throw new Error("productInCartIds contains invalid id");
     }
 
     // Fetch the productInCart details
