@@ -95,12 +95,14 @@ export const addToSales = expressAsyncHandler(
         !Array.isArray(products) ||
         products.some(
           ({ product_id, quantity }) =>
-            !validateIdParams(product_id) || typeof quantity !== "number"
+            !validateIdParams(product_id) ||
+            typeof quantity !== "number" ||
+            quantity === 0
         )
       ) {
         res.status(400);
         throw new Error(
-          "Invalid products format or invalid product id or quantity"
+          "Invalid products format or invalid product id or quantity or the quantity is zero"
         );
       }
 
@@ -141,10 +143,10 @@ export const addToSales = expressAsyncHandler(
         );
       }
 
-      if (driverLoadProduct.quantity < quantity) {
+      if (driverLoadProduct.quantity <= quantity) {
         res.status(400);
         throw new Error(
-          `Insufficient quantity for product ID ${driverLoadProduct.Product?.name}`
+          `Insufficient quantity for product ${driverLoadProduct.Product?.name}`
         );
       }
 
@@ -188,6 +190,15 @@ export const addToSales = expressAsyncHandler(
           paymentOptions,
           customerId: customerid,
           driver_id: driverId,
+        },
+      });
+
+      await prisma.product.update({
+        where: { id: product_id },
+        data: {
+          quantity: {
+            decrement: quantity,
+          },
         },
       });
     }

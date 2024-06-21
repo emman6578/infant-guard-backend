@@ -19,12 +19,6 @@ export const addProduct = expressAsyncHandler(
     checkRequiredFieldsProducts(req);
     checkIfEmptyFields(req);
 
-    if (
-      await prisma.product.findUnique({ where: { barcode: product.barcode } })
-    ) {
-      throw new Error("Barcode must be unique");
-    }
-
     const categories = await Promise.all(
       product.Category.map(async (category) => {
         const existingCategory = await prisma.category.findUnique({

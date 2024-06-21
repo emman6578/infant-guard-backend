@@ -21,11 +21,14 @@ export const add = expressAsyncHandler(
       throw new Error("Products must be a non-empty array");
     }
 
+    const productsWithInsufficientStock: string[] = [];
+
     // Validate the products array
     for (const product of products) {
       if (
         typeof product.product_id !== "string" ||
-        typeof product.quantity !== "number"
+        typeof product.quantity !== "number" ||
+        product.quantity === 0
       ) {
         throw new Error(
           "Each product must have a valid product_id and quantity"
@@ -40,6 +43,24 @@ export const add = expressAsyncHandler(
           throw new Error(`Invalid field '${key}' in product`);
         }
       }
+
+      // Check if the requested quantity exceeds available stock
+      const dbProduct = await prisma.product.findUnique({
+        where: { id: product.product_id },
+      });
+
+      if (product.quantity > dbProduct!.quantity) {
+        productsWithInsufficientStock.push(dbProduct!.name);
+      }
+    }
+
+    // If there are products with insufficient stock, throw an error
+    if (productsWithInsufficientStock.length > 0) {
+      throw new Error(
+        `Insufficient stock for the following products: ${productsWithInsufficientStock.join(
+          ", "
+        )}`
+      );
     }
 
     // Retrieve user's cart along with associated products if it exists
@@ -73,7 +94,7 @@ export const add = expressAsyncHandler(
       });
 
       if (!product) {
-        throw new Error(`Product with id ${product_id} does not exist`);
+        throw new Error(`The product you are trying to add does not exist`);
       }
 
       // Calculate the total price for the product based on quantity
@@ -412,6 +433,13 @@ export const updateProductInCartQuantity = expressAsyncHandler(
     if (!product) {
       throw new Error(
         `Product with id ${productInCart.product_id} does not exist`
+      );
+    }
+
+    // Compare the requested quantity with the available quantity in the product
+    if (quantity > product.quantity) {
+      throw new Error(
+        `Requested quantity ${quantity} exceeds available quantity ${product.quantity}`
       );
     }
 

@@ -67,7 +67,7 @@ model Token {
 model Product {
   id String @id @default(uuid())
 
-  barcode             String?      @unique
+  barcode             String?
   name                String
   quantity            Int
   weight              Float
