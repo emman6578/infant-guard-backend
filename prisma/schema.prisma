@@ -29,7 +29,7 @@ model Admin {
 
   Token Token[]
   Cart  Cart?
-  Order Order[]
+  Order Order?
 
   DriverLoadProducts DriverLoadProducts[]
 }
@@ -67,7 +67,7 @@ model Token {
 model Product {
   id String @id @default(uuid())
 
-  barcode             String?
+  barcode             String?      @unique
   name                String
   quantity            Int
   weight              Float
@@ -91,7 +91,8 @@ model Product {
 
   ProductInCart      ProductInCart[]
   DriverLoadProducts DriverLoadProducts[]
-  Order              Order[]
+
+  OrderProducts OrderProducts[]
 
   DriverSales DriverSales[]
 }
@@ -144,17 +145,32 @@ model ProductInCart {
 model Order {
   id String @id @default(uuid())
 
-  total                 Float //base on the product get in the product in cart calculate the total order
-  wholesale_price_total Float //base on the product get in the product in cart calculate the total order
+  Product OrderProducts[] //to get the product id first fetch the productin cart find the id of the product inside it
+
+  total                 Float? //base on the product get in the product in cart calculate the total order
+  wholesale_price_total Float? //base on the product get in the product in cart calculate the total order
   payment_status        PaymentStatus?
-  quantity              Int //this quntatity is getting from the ProductinCart
+  quantity              Int? //this quntatity is getting from the ProductinCart
   status                Status? //also for status fetch first the product in cart to get the status
-  address               String
+  address               String?
 
   admin    Admin  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
-  admin_id String
+  admin_id String @unique
 
-  product Product[] //to get the product id first fetch the productin cart find the id of the product inside it
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderProducts {
+  id String @id @default(uuid())
+
+  Product   Product? @relation(fields: [productId], references: [id])
+  productId String?
+
+  quantity Int
+
+  Order   Order?  @relation(fields: [orderId], references: [id])
+  orderId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -188,9 +188,34 @@ export const getDeliveries = expressAsyncHandler(
   async (req: Request, res: Response) => {
     // Fetch all deliveries for the given admin
     const deliveries = await prisma.driverLoad.findMany({
-      include: { DriverLoadProducts: true },
+      include: {
+        DriverLoadProducts: {
+          include: {
+            Product: {
+              select: {
+                name: true,
+                quantity: true,
+                price: true,
+                wholesale_price: true,
+              },
+            },
+          },
+        },
+        driver: true,
+      },
     });
 
     successHandler(deliveries, res, "GET");
+  }
+);
+
+export const getDrivers = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    // Fetch all deliveries for the given admin
+    const drivers = await prisma.driver.findMany({
+      include: { DriverLoad: true },
+    });
+
+    successHandler(drivers, res, "GET");
   }
 );

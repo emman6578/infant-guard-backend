@@ -4,13 +4,13 @@ import { authenticateToken, isAdmin } from "../Middleware/authMiddleware";
 import {
   addToDelivery,
   getDeliveries,
-  // receipt,
+  getDrivers,
 } from "../Controller/DeliveryController/DeliveryController";
 
 const router = Router();
 
 router.post("/", authenticateToken, isAdmin, addToDelivery);
 router.get("/", authenticateToken, isAdmin, getDeliveries);
-// router.get("/receipt", authenticateToken, isAdmin, receipt);
+router.get("/drivers", authenticateToken, isAdmin, getDrivers);
 
 export default router;

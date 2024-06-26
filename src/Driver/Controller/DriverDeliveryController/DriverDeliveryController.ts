@@ -12,7 +12,7 @@ export const getCurrentlyLoggedInDriver = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
     const driverId = req.driver?.id;
 
-    const allUsers = await prisma.driver.findMany({
+    const allUsers = await prisma.driver.findUnique({
       where: { id: driverId },
       include: { DriverLoad: true },
     });
@@ -29,7 +29,7 @@ export const getDeliveriesbyDriverLoggedin = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
     const driverId = req.driver?.id;
     // Fetch all deliveries for the given admin
-    const deliveries = await prisma.driverLoad.findMany({
+    const deliveries = await prisma.driverLoad.findUnique({
       where: { driver_id: driverId },
     });
 
@@ -41,7 +41,7 @@ export const listOfProductsforSale = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
     const driverId = req.driver?.id;
     // Fetch all deliveries for the given admin
-    const deliveries = await prisma.driverLoad.findMany({
+    const deliveries = await prisma.driverLoad.findUnique({
       where: { driver_id: driverId },
       select: {
         DriverLoadProducts: {
@@ -50,6 +50,7 @@ export const listOfProductsforSale = expressAsyncHandler(
             Product: {
               select: {
                 id: true,
+                barcode: true,
                 name: true,
                 price: true,
                 wholesale_price: true,
@@ -85,70 +86,77 @@ export const addToSales = expressAsyncHandler(
       throw new Error("Driver load not found");
     }
 
+    // Validate input
+    if (
+      !Array.isArray(products) ||
+      products.some(
+        ({ product_id, quantity }) =>
+          !validateIdParams(product_id) ||
+          typeof quantity !== "number" ||
+          quantity === 0
+      )
+    ) {
+      res.status(400);
+      throw new Error(
+        "Invalid products format or invalid product id or quantity or the quantity is zero"
+      );
+    }
+
+    if (!validateIdParams(customerid)) {
+      res.status(400);
+      throw new Error("Invalid customer ID");
+    }
+
+    if (!["WHOLESALE", "RETAIL"].includes(saleType)) {
+      res.status(400);
+      throw new Error("Invalid sale type");
+    }
+
+    if (!["CASH", "PAY_LATER", "GCASH"].includes(paymentOptions)) {
+      res.status(400);
+      throw new Error("Invalid payment option");
+    }
+
+    // Check for sufficient quantity in all products first
+    let insufficientProducts = [];
+    let sufficientProducts = [];
+
     for (const { product_id, quantity } of products) {
       const driverLoadProduct = driverLoad.DriverLoadProducts.find(
         (p) => p.product_id === product_id
       );
-
-      // Validate products
-      if (
-        !Array.isArray(products) ||
-        products.some(
-          ({ product_id, quantity }) =>
-            !validateIdParams(product_id) ||
-            typeof quantity !== "number" ||
-            quantity === 0
-        )
-      ) {
-        res.status(400);
-        throw new Error(
-          "Invalid products format or invalid product id or quantity or the quantity is zero"
-        );
-      }
-
-      // Validate customer ID
-      if (!validateIdParams(customerid)) {
-        res.status(400);
-        throw new Error("Invalid customer ID");
-      }
-
-      // Validate saleType
-      if (!["WHOLESALE", "RETAIL"].includes(saleType)) {
-        res.status(400);
-        throw new Error("Invalid sale type");
-      }
-
-      // Validate paymentOptions
-      if (!["CASH", "PAY_LATER", "GCASH"].includes(paymentOptions)) {
-        res.status(400);
-        throw new Error("Invalid payment option");
-      }
-
-      let ProductName;
 
       if (!driverLoadProduct) {
         const product = await prisma.product.findUnique({
           where: { id: product_id },
           select: { name: true },
         });
-        ProductName = product ? product.name : `ID ${product_id}`;
-        res.status(404);
-        throw new Error(`Product ${ProductName} not found in driver load`);
-      }
-
-      if (!driverLoadProduct) {
-        res.status(404);
-        throw new Error(
-          `Product with ID ${ProductName} not found in driver load`
+        const productName = product ? product.name : `ID ${product_id}`;
+        insufficientProducts.push(
+          `Product ${productName} not found in driver load`
         );
-      }
-
-      if (driverLoadProduct.quantity <= quantity) {
-        res.status(400);
-        throw new Error(
-          `Insufficient quantity for product ${driverLoadProduct.Product?.name}`
+      } else if (driverLoadProduct.quantity < quantity) {
+        insufficientProducts.push(
+          `\nInsufficient quantity for product ${driverLoadProduct.Product?.name}`
         );
+      } else {
+        sufficientProducts.push(driverLoadProduct);
       }
+    }
+
+    // If there are any insufficient products, throw an error
+    if (insufficientProducts.length > 0) {
+      res.status(400);
+      throw new Error(
+        `\n\nValidation failed: ${insufficientProducts.join(", ")}`
+      );
+    }
+
+    // Proceed with the update if all validations pass
+    for (const driverLoadProduct of sufficientProducts) {
+      const { product_id, quantity } = products.find(
+        (p) => p.product_id === driverLoadProduct.product_id
+      );
 
       const productPrice =
         saleType === "WHOLESALE"
@@ -164,12 +172,10 @@ export const addToSales = expressAsyncHandler(
 
       const totalSale = productPrice * quantity;
 
-      let balance;
-      if (paymentOptions === "PAY_LATER" || paymentOptions === "GCASH") {
-        balance = totalSale;
-      } else {
-        balance = 0;
-      }
+      const balance =
+        paymentOptions === "PAY_LATER" || paymentOptions === "GCASH"
+          ? totalSale
+          : 0;
 
       await prisma.driverLoadProducts.update({
         where: { id: driverLoadProduct.id },

@@ -14,61 +14,65 @@ const prisma = new PrismaClient();
 
 export const addProduct = expressAsyncHandler(
   async (req: Request, res: Response) => {
-    const product: ProductInterface = req.body;
+    const products: ProductInterface[] = req.body;
 
-    checkRequiredFieldsProducts(req);
-    checkIfEmptyFields(req);
-
-    const categories = await Promise.all(
-      product.Category.map(async (category) => {
-        const existingCategory = await prisma.category.findUnique({
-          where: {
-            name: category.name,
-          },
-        });
-        if (existingCategory) {
-          return existingCategory;
-        } else {
-          return prisma.category.create({
-            data: {
-              name: category.name,
-            },
-          });
-        }
-      })
-    );
-
-    const createProduct = await prisma.product.create({
-      data: {
-        barcode: product.barcode,
-        name: product.name,
-        quantity: product.quantity,
-        weight: product.weight,
-        unit_of_measure: product.unit_of_measure,
-        price: product.price,
-        wholesale_price: product.wholesale_price,
-        Category: {
-          connect: categories,
-        },
-        brand: product.brand,
-        description: product.description,
-        expiration: product.expiration,
-        date_of_manufacture: product.date_of_manufacture,
-        supplier: product.supplier,
-        stock_status: product.stock_status,
-        minimum_stock_level: product.minimum_stock_level,
-        maximum_stock_level: product.maximum_stock_level,
-      },
-      include: {
-        Category: true,
-      },
+    // Validate each product in the array
+    products.forEach((product) => {
+      checkRequiredFieldsProducts({ body: product });
+      checkIfEmptyFields({ body: product });
     });
 
-    if (!createProduct) {
-      throw new Error("Failed to create product");
-    }
+    const createProducts = await prisma.$transaction(async (prisma) => {
+      return await Promise.all(
+        products.map(async (product) => {
+          // Ensure categories exist or create them (using upsert)
+          const categories = await Promise.all(
+            product.Category.map(async (category) => {
+              try {
+                return await prisma.category.upsert({
+                  where: { name: category.name },
+                  update: {},
+                  create: { name: category.name },
+                });
+              } catch (error) {
+                // Handle any errors here, such as logging or retrying
+                console.error(
+                  `Error upserting category ${category.name}:`,
+                  error
+                );
+                throw error; // Propagate the error up
+              }
+            })
+          );
 
-    successHandler(createProduct, res, "POST");
+          // Create the product with the associated categories
+          return prisma.product.create({
+            data: {
+              barcode: product.barcode,
+              name: product.name,
+              quantity: product.quantity,
+              weight: product.weight,
+              price: product.price,
+              wholesale_price: product.wholesale_price,
+              Category: {
+                connect: categories.map((category) => ({ id: category.id })),
+              },
+              brand: product.brand,
+              description: product.description,
+              unit_of_measure: product.unit_of_measure,
+              expiration: product.expiration,
+              date_of_manufacture: product.date_of_manufacture,
+              supplier: product.supplier,
+              stock_status: product.stock_status,
+              minimum_stock_level: product.minimum_stock_level,
+              maximum_stock_level: product.maximum_stock_level,
+            },
+          });
+        })
+      );
+    });
+
+    successHandler(createProducts, res, "POST");
   }
 );
 

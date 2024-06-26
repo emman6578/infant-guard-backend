@@ -24,3 +24,15 @@ export const createCustomer = expressAsyncHandler(
     successHandler(create, res, "GET");
   }
 );
+
+export const getCustomers = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const create = await prisma.customer.findMany({});
+
+    if (!create) {
+      throw new Error("Error getting customer");
+    }
+
+    successHandler(create, res, "GET");
+  }
+);

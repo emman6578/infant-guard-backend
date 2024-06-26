@@ -3,30 +3,23 @@ import { PrismaClient } from "@prisma/client";
 import expressAsyncHandler from "express-async-handler";
 import fs from "fs";
 import path from "path";
+import moment from "moment";
+
 import {
   generateToken,
   validateToken,
 } from "../../../Config/Token/downloadTokenMiddleware";
 import { AuthRequest } from "../../Middleware/authMiddleware";
 
-import multer from "multer";
 import {
   createExcelFile,
-  readExcelFile,
-  updateProductsInDatabase,
+  createProductsInDatabase,
+  UpdateProductsFromExcelFile,
 } from "./Print helpers/printHelper";
+
 import { successHandler } from "../../Middleware/ErrorHandler";
 
 const prisma = new PrismaClient();
-
-// Ensure uploads folder exists
-const uploadsDir = path.join(__dirname, "Uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
-
-// Configure multer to use the uploads directory
-const upload = multer({ dest: uploadsDir });
 
 export const print = expressAsyncHandler(
   async (req: Request, res: Response) => {
@@ -47,7 +40,7 @@ export const print = expressAsyncHandler(
 
       const directoryPath = path.join(__dirname, "../../../../Download");
       // const filePath = path.join(directoryPath, "products.xlsx");
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const timestamp = moment().format("YYYY-MM-DD_HH-mm-ss");
       const filePath = path.join(directoryPath, `products_${timestamp}.xlsx`);
 
       await createExcelFile(products, filePath);
@@ -59,18 +52,15 @@ export const print = expressAsyncHandler(
   }
 );
 
-export const update = [
-  upload.single("file"),
-  expressAsyncHandler(async (req: Request, res: Response) => {
+export const update = expressAsyncHandler(
+  async (req: Request, res: Response) => {
     try {
       const file = req.file;
       if (!file) {
         throw new Error("File not provided.");
       }
 
-      const productsToUpdate = await readExcelFile(file.path);
-
-      await updateProductsInDatabase(productsToUpdate);
+      await UpdateProductsFromExcelFile(file.path);
 
       // Delete the uploaded file after processing
       fs.unlink(file.path, (err) => {
@@ -89,8 +79,8 @@ export const update = [
     } catch (error) {
       throw new Error("Error updating products from Excel file." + error);
     }
-  }),
-];
+  }
+);
 
 export const listFileInDownloadsFolder = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -172,7 +162,7 @@ export const printBySupplier = expressAsyncHandler(
       }
 
       const directoryPath = path.join(__dirname, "../../../../Download");
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const timestamp = moment().format("YYYY-MM-DD_HH-mm-ss");
       const filePath = path.join(
         directoryPath,
         `products_by_supplier_${timestamp}.xlsx`
@@ -185,5 +175,31 @@ export const printBySupplier = expressAsyncHandler(
     } catch (error) {
       throw new Error("Error generating Excel file." + error);
     }
+  }
+);
+
+export const create = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const file = req.file;
+    if (!file) {
+      throw new Error("File not provided.");
+    }
+
+    await createProductsInDatabase(file.path);
+
+    // Delete the uploaded file after processing
+    fs.unlink(file.path, (err) => {
+      if (err) {
+        throw new Error("Error deleting the file:" + err);
+      } else {
+        console.log("File deleted successfully:", file.path);
+      }
+    });
+
+    successHandler(
+      "Products updated successfully from Excel file.",
+      res,
+      "POST"
+    );
   }
 );

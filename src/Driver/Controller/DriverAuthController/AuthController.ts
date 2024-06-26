@@ -59,7 +59,7 @@ export const driverLogin = expressAsyncHandler(
     });
 
     if (!checkEmail) {
-      throw new Error("Please register first");
+      throw new Error("This email address is not valid");
     }
 
     const createdTokenEmail = await prisma.token.create({

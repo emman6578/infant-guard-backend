@@ -25,9 +25,9 @@ export const createExcelFile = async (products: any[], filePath: string) => {
     { header: "Stock Status", key: "stock_status" }, //13
     { header: "Minimum Stock Level", key: "minimum_stock_level" }, //14
     { header: "Maximum Stock Level", key: "maximum_stock_level" }, //15
-    { header: "Expiration", key: "expiration" }, //16
-    { header: "Date of Manufacture", key: "date_of_manufacture" }, //17
-    { header: "Date of Entry", key: "date_of_entry" }, //18
+    { header: "Date of Entry", key: "date_of_entry" }, //16
+    { header: "Expiration", key: "expiration" }, //17
+    { header: "Date of Manufacture", key: "date_of_manufacture" }, //18
   ];
   worksheet.columns = columns;
 
@@ -79,7 +79,7 @@ export const createExcelFile = async (products: any[], filePath: string) => {
   await workbook.xlsx.writeFile(filePath);
 };
 
-export const readExcelFile = async (filePath: string) => {
+export const UpdateProductsFromExcelFile = async (filePath: string) => {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(filePath);
 
@@ -94,91 +94,250 @@ export const readExcelFile = async (filePath: string) => {
     throw new Error("Worksheet 'Products' not found in the Excel file.");
   }
 
-  const productsToUpdate: {
-    [key: string]: {
-      barcode?: string;
-      name?: string;
-      quantity?: number;
-      weight?: number;
-      unit_of_measure?: Measurement;
-      price?: number;
-      wholesale_price: number;
-      brand?: string;
-      description?: string;
-      supplier?: string;
-      stock_status?: StockStatus;
-      minimum_stock_level?: number;
-      maximum_stock_level?: number;
-    };
-  } = {};
+  const headers: string[] = [];
+  worksheet.getRow(1).eachCell((cell) => {
+    headers.push(cell.text);
+  });
 
+  const requiredFields = [
+    "ID",
+    "Barcode",
+    "Name",
+    "Quantity",
+    "Weight",
+    "Unit of Measure",
+    "Price",
+    "Wholesale Price",
+    "Brand",
+    "Description",
+    "Supplier",
+    "Stock Status",
+    "Minimum Stock Level",
+    "Maximum Stock Level",
+  ];
+
+  const data: { [key: string]: any }[] = [];
   worksheet.eachRow((row, rowNumber) => {
-    if (rowNumber === 1) return;
+    if (rowNumber === 1) return; // Skip the header row
 
-    const rowData_id = row.getCell(1).value?.toString();
-    if (rowData_id) {
-      productsToUpdate[rowData_id] = {
-        barcode: row.getCell(2).value?.toString(),
-        name: row.getCell(3).value?.toString(),
-        quantity: row.getCell(4).value as number,
-        weight: row.getCell(5).value as number,
-        unit_of_measure: row.getCell(6).value as Measurement,
-        price: row.getCell(7).value as number,
-        wholesale_price: row.getCell(8).value as number,
-        brand: row.getCell(9).value?.toString(),
-        description: row.getCell(10).value?.toString(),
-        supplier: row.getCell(12).value as StockStatus,
-        stock_status: row.getCell(13).value as StockStatus,
-        minimum_stock_level: row.getCell(14).value as number,
-        maximum_stock_level: row.getCell(15).value as number,
-      };
+    const rowData: { [key: string]: any } = {};
+    row.eachCell((cell, colNumber) => {
+      const header = headers[colNumber - 1];
+      rowData[header] = cell.text;
+    });
+
+    // Validate required fields
+    requiredFields.forEach((field) => {
+      if (!rowData[field]) {
+        throw new Error(
+          `Required field '${field}' is missing or empty in row ${rowNumber}`
+        );
+      }
+    });
+
+    data.push(rowData);
+  });
+
+  const formattedData = data.map((item) => {
+    return {
+      id: item["ID"],
+      barcode: item["Barcode"],
+      name: item["Name"],
+      quantity: parseInt(item["Quantity"], 10),
+      weight: parseFloat(item["Weight"]),
+      unit_of_measure: item["Unit of Measure"],
+      price: parseFloat(item["Price"]),
+      wholesale_price: parseFloat(item["Wholesale Price"]),
+      brand: item["Brand"],
+      description: item["Description"],
+      supplier: item["Supplier"],
+      stock_status: item["Stock Status"],
+      minimum_stock_level: parseInt(item["Minimum Stock Level"], 10),
+      maximum_stock_level: parseInt(item["Maximum Stock Level"], 10),
+    };
+  });
+
+  const updateProducts = await prisma.$transaction(async (prisma) => {
+    return await Promise.all(
+      formattedData.map(async (product) => {
+        return prisma.product.update({
+          where: { id: product.id },
+          data: {
+            barcode: product.barcode,
+            name: product.name,
+            quantity: product.quantity,
+            weight: product.weight,
+            price: product.price,
+            wholesale_price: product.wholesale_price,
+            brand: product.brand,
+            description: product.description,
+            unit_of_measure: product.unit_of_measure,
+            supplier: product.supplier,
+            stock_status: product.stock_status,
+            minimum_stock_level: product.minimum_stock_level,
+            maximum_stock_level: product.maximum_stock_level,
+          },
+        });
+      })
+    );
+  });
+};
+
+export const createProductsInDatabase = async (filePath: string) => {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(filePath);
+
+  let worksheet: ExcelJS.Worksheet | undefined;
+  workbook.eachSheet((sheet) => {
+    if (sheet.name === "Products") {
+      worksheet = sheet;
     }
   });
 
-  return productsToUpdate;
-};
+  if (!worksheet) {
+    throw new Error("Worksheet 'Products' not found in the Excel file.");
+  }
 
-export const updateProductsInDatabase = async (productsToUpdate: {
-  [key: string]: {
-    barcode?: string;
-    name?: string;
-    quantity?: number;
-    weight?: number;
-    unit_of_measure?: Measurement;
-    price?: number;
-    wholesale_price?: number;
-    brand?: string;
-    description?: string;
-    supplier?: string;
-    stock_status?: StockStatus;
-    minimum_stock_level?: number;
-    maximum_stock_level?: number;
-  };
-}) => {
-  const updates = Object.entries(productsToUpdate).map(([id, data]) => ({
-    where: { id },
-    data: {
-      barcode: data.barcode,
-      name: data.name,
-      quantity: data.quantity,
-      weight: data.weight,
-      unit_of_measure: data.unit_of_measure,
-      price: data.price,
-      wholesale_price: data.wholesale_price,
-      brand: data.brand,
-      description: data.description,
-      stock_status: data.stock_status,
-      minimum_stock_level: data.minimum_stock_level,
-      maximum_stock_level: data.maximum_stock_level,
+  const headers: string[] = [];
+  worksheet.getRow(1).eachCell((cell) => {
+    headers.push(cell.text);
+  });
+
+  const requiredFields = [
+    "Barcode",
+    "Name",
+    "Quantity",
+    "Weight",
+    "Unit of Measure",
+    "Price",
+    "Wholesale Price",
+    "Brand",
+    "Description",
+    "Category",
+    "Supplier",
+    "Stock Status",
+    "Minimum Stock Level",
+    "Maximum Stock Level",
+    "Expiration",
+    "Date of Manufacture",
+  ];
+
+  const data: { [key: string]: any }[] = [];
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return; // Skip the header row
+
+    const rowData: { [key: string]: any } = {};
+    row.eachCell((cell, colNumber) => {
+      const header = headers[colNumber - 1];
+      rowData[header] = cell.text;
+    });
+
+    // Validate required fields
+    requiredFields.forEach((field) => {
+      if (!rowData[field]) {
+        throw new Error(
+          `Required field '${field}' is missing or empty in row ${rowNumber}`
+        );
+      }
+    });
+
+    data.push(rowData);
+  });
+
+  const formattedData = data.map((item) => {
+    const categories = item["Category"]
+      .split(",")
+      .map((cat: string) => ({ name: cat.trim() }));
+
+    return {
+      barcode: item["Barcode"],
+      name: item["Name"],
+      quantity: parseInt(item["Quantity"], 10),
+      weight: parseFloat(item["Weight"]),
+      unit_of_measure: item["Unit of Measure"],
+      price: parseFloat(item["Price"]),
+      wholesale_price: parseFloat(item["Wholesale Price"]),
+      brand: item["Brand"],
+      description: item["Description"],
+      Category: categories,
+      supplier: item["Supplier"],
+      stock_status: item["Stock Status"],
+      minimum_stock_level: parseInt(item["Minimum Stock Level"], 10),
+      maximum_stock_level: parseInt(item["Maximum Stock Level"], 10),
+      expiration: item["Expiration"],
+      date_of_manufacture: item["Date of Manufacture"],
+    };
+  });
+
+  // Check for existing barcodes
+  const barcodes = formattedData.map((product) => product.barcode);
+  const existingProducts = await prisma.product.findMany({
+    where: {
+      barcode: {
+        in: barcodes,
+      },
     },
-  }));
+    select: {
+      barcode: true,
+    },
+  });
 
-  await Promise.all(
-    updates.map(async (update) => {
-      await prisma.product.update({
-        where: { id: update.where.id },
-        data: update.data,
-      });
-    })
-  );
+  if (existingProducts.length > 0) {
+    const existingBarcodes = existingProducts.map((product) => product.barcode);
+    throw new Error(
+      `The following barcodes already exist in the database: ${existingBarcodes.join(
+        ", "
+      )}`
+    );
+  }
+
+  const createProducts = await prisma.$transaction(async (prisma) => {
+    return await Promise.all(
+      formattedData.map(async (product) => {
+        // Ensure categories exist or create them (using upsert)
+        const categories = await Promise.all(
+          product.Category.map(async (category: any) => {
+            try {
+              return await prisma.category.upsert({
+                where: { name: category.name },
+                update: {},
+                create: { name: category.name },
+              });
+            } catch (error) {
+              // Handle any errors here, such as logging or retrying
+              console.error(
+                `Error upserting category ${category.name}:`,
+                error
+              );
+              throw error; // Propagate the error up
+            }
+          })
+        );
+
+        // Create the product with the associated categories
+        return prisma.product.create({
+          data: {
+            barcode: product.barcode,
+            name: product.name,
+            quantity: product.quantity,
+            weight: product.weight,
+            price: product.price,
+            wholesale_price: product.wholesale_price,
+            Category: {
+              connect: categories.map((category) => ({ id: category.id })),
+            },
+            brand: product.brand,
+            description: product.description,
+            unit_of_measure: product.unit_of_measure,
+            expiration: product.expiration,
+            date_of_manufacture: product.date_of_manufacture,
+            supplier: product.supplier,
+            stock_status: product.stock_status,
+            minimum_stock_level: product.minimum_stock_level,
+            maximum_stock_level: product.maximum_stock_level,
+          },
+        });
+      })
+    );
+  });
 };
