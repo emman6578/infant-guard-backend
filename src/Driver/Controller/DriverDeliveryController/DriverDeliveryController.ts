@@ -177,6 +177,11 @@ export const addToSales = expressAsyncHandler(
           ? totalSale
           : 0;
 
+      const sales =
+        paymentOptions === "PAY_LATER" || paymentOptions === "GCASH"
+          ? 0
+          : totalSale;
+
       await prisma.driverLoadProducts.update({
         where: { id: driverLoadProduct.id },
         data: {
@@ -187,7 +192,7 @@ export const addToSales = expressAsyncHandler(
       await prisma.driverSales.create({
         data: {
           product_id,
-          sales: totalSale,
+          sales,
           saleType: saleType,
           paymentStatus,
           balance,
