@@ -9,8 +9,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  // provider = "mysql"
+  // provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -94,7 +94,9 @@ model Product {
 
   OrderProducts OrderProducts[]
 
-  DriverSales DriverSales[]
+  DriverSales         DriverSales[]
+  SaleSummary         SaleSummary[]
+  SalesReportProducts SalesReportProducts[]
 }
 
 model Category {
@@ -238,8 +240,11 @@ model Driver {
 
   Token Token[]
 
-  DriverLoad  DriverLoad?
-  DriverSales DriverSales[]
+  DriverLoad          DriverLoad?
+  DriverSales         DriverSales[]
+  SaleSummary         SaleSummary[]
+  SalesReportProducts SalesReportProducts[]
+  SalesReport         SalesReport[]
 }
 
 model DriverLoad {
@@ -285,7 +290,7 @@ model DriverSales {
   sales          Float
   saleType       SaleType?
   quantity       Float?
-  status         SalesStatus     @default(SOLD)
+  status         SalesStatus     @default(CONFIRMED)
   paymentOptions PaymentOptions?
   paymentStatus  PaymentStatus?
   balance        Float           @default(0)
@@ -309,8 +314,11 @@ model Customer {
   Purchased DriverSales[] //will list of products from delivery load
   total     Float?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  SaleSummary SaleSummary[]
+
+  SalesReportProducts SalesReportProducts[]
 }
 
 enum PaymentOptions {
@@ -327,4 +335,71 @@ enum SaleType {
 enum SalesStatus {
   FORSALE
   SOLD
+  CONFIRMED
+}
+
+model SaleSummary {
+  id String @id @default(uuid())
+
+  Product    Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  product_id String
+
+  sales          Float
+  saleType       SaleType?
+  quantity       Float?
+  status         SalesStatus     @default(SOLD)
+  paymentOptions PaymentOptions?
+  paymentStatus  PaymentStatus?
+  balance        Float           @default(0)
+
+  Customer   Customer? @relation(fields: [customerId], references: [id])
+  customerId String?
+
+  driver    Driver? @relation(fields: [driver_id], references: [id])
+  driver_id String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SalesReport {
+  id String @id @default(uuid())
+
+  SalesReportProducts SalesReportProducts[]
+  QuantitySold        Int                   @default(0)
+
+  dateAdded DateTime @default(now())
+
+  driver    Driver? @relation(fields: [driver_id], references: [id])
+  driver_id String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SalesReportProducts {
+  id String @id @default(uuid())
+
+  Product    Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  product_id String
+
+  sales          Float
+  saleType       SaleType?
+  quantity       Float?
+  status         SalesStatus     @default(SOLD)
+  paymentOptions PaymentOptions?
+  paymentStatus  PaymentStatus?
+  balance        Float           @default(0)
+
+  Customer   Customer? @relation(fields: [customerId], references: [id])
+  customerId String?
+
+  driver    Driver? @relation(fields: [driver_id], references: [id])
+  driver_id String?
+
+  SalesReport   SalesReport? @relation(fields: [salesReportId], references: [id])
+  salesReportId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

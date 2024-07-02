@@ -200,6 +200,7 @@ export const getDeliveries = expressAsyncHandler(
               },
             },
           },
+          orderBy: { quantity: "desc" },
         },
         driver: true,
       },
@@ -306,7 +307,7 @@ export const getAllSales = expressAsyncHandler(
 export const getAllTotalSales = expressAsyncHandler(
   async (req: Request, res: Response) => {
     // Fetch the sales data with filtering, sorting, and pagination
-    const totalSales = await prisma.driverSales.findMany({});
+    const totalSales = await prisma.saleSummary.findMany({});
 
     // Calculate the totals
     const totals = totalSales.reduce(
@@ -357,16 +358,20 @@ export const driverSales = expressAsyncHandler(
       throw new Error("Driver Not Found");
     }
 
-    const findDriverSales = await prisma.driverSales.findMany({
+    const findDriverSales = await prisma.saleSummary.findMany({
       where: { driver_id: driver!.id },
     });
 
     // Calculate the totals
     const totals = findDriverSales.reduce(
       (acc, sale) => {
-        if (sale.paymentStatus === "UNPAID") {
+        if (
+          sale.paymentStatus === "UNPAID" ||
+          sale.paymentStatus === "PROCESSING"
+        ) {
           acc.totalUnpaidBalance += sale.balance;
         }
+
         if (sale.saleType === "RETAIL") {
           acc.totalRetailSales += sale.sales;
         } else if (sale.saleType === "WHOLESALE") {

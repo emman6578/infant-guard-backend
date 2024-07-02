@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE `driverload` MODIFY `status` ENUM('FORSALE', 'SOLD', 'CONFIRMED') NOT NULL DEFAULT 'FORSALE';
+
+-- AlterTable
+ALTER TABLE `driversales` MODIFY `status` ENUM('FORSALE', 'SOLD', 'CONFIRMED') NOT NULL DEFAULT 'CONFIRMED';
+
+-- AlterTable
+ALTER TABLE `salesummary` MODIFY `status` ENUM('FORSALE', 'SOLD', 'CONFIRMED') NOT NULL DEFAULT 'SOLD';

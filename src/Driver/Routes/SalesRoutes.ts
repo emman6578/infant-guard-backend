@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  ConfirmSales,
   getLoggedInDriverSales,
   getSalesByDriver,
 } from "../Controller/SalesController/SalesController";
@@ -9,5 +10,6 @@ const router = Router();
 
 router.get("/total", driverAuthenticateToken, getLoggedInDriverSales);
 router.get("/driverSales", driverAuthenticateToken, getSalesByDriver);
+router.post("/confirm", driverAuthenticateToken, ConfirmSales);
 
 export default router;

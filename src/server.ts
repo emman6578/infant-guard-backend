@@ -11,6 +11,7 @@ import PrintRoutes from "./Admin/Routes/PrintRoutes";
 import CartRoutes from "./Admin/Routes/CartRoutes";
 import OrderRoutes from "./Admin/Routes/OrderRoutes";
 import DeliveryRoutes from "./Admin/Routes/DeliveryRoutes";
+import SalesReport from "./Admin/Routes/SalesReportRoutes";
 
 //driver route import
 import DriverAuth from "./Driver/Routes/DriverAuthRoutes";
@@ -35,7 +36,6 @@ const PORT = process.env.PORT || 3006;
 server.use(helmet());
 server.use(cors());
 server.use(express.json());
-// server.use(express.urlencoded({ extended: true }));
 
 //logger middleware
 server.use(loggerMiddleware);
@@ -49,6 +49,7 @@ server.use("/api/print", PrintRoutes);
 server.use("/api/cart", CartRoutes);
 server.use("/api/order", OrderRoutes);
 server.use("/api/delivery", DeliveryRoutes);
+server.use("/api/report", SalesReport);
 
 //driver routes
 server.use("/api/driver/auth", DriverAuth);

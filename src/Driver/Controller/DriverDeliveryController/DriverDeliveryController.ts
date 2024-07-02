@@ -43,6 +43,7 @@ export const listOfProductsforSale = expressAsyncHandler(
     // Fetch all deliveries for the given admin
     const deliveries = await prisma.driverLoad.findUnique({
       where: { driver_id: driverId },
+
       select: {
         DriverLoadProducts: {
           select: {
@@ -57,6 +58,7 @@ export const listOfProductsforSale = expressAsyncHandler(
               },
             },
           },
+          orderBy: { quantity: "desc" },
         },
       },
     });
@@ -189,7 +191,7 @@ export const addToSales = expressAsyncHandler(
         },
       });
 
-      await prisma.driverSales.create({
+      await prisma.saleSummary.create({
         data: {
           product_id,
           sales,
@@ -201,6 +203,15 @@ export const addToSales = expressAsyncHandler(
           paymentOptions,
           customerId: customerid,
           driver_id: driverId,
+        },
+      });
+
+      await prisma.driverLoad.update({
+        where: { driver_id: driverId },
+        data: {
+          total_load_products: {
+            decrement: quantity,
+          },
         },
       });
 
