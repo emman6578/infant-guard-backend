@@ -37,6 +37,55 @@ export const getDeliveriesbyDriverLoggedin = expressAsyncHandler(
   }
 );
 
+export const updateDeliveriesbyDriverLoggedin = expressAsyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const driverId = req.driver?.id;
+
+    // Fetch all deliveries for the given driver
+    const deliveries = await prisma.driverLoad.findUnique({
+      where: { driver_id: driverId },
+      include: {
+        DriverLoadProducts: {
+          include: {
+            Product: true,
+          },
+        },
+      },
+    });
+
+    if (!deliveries) {
+      throw new Error("Deliveries not found");
+    }
+
+    // Recalculate values
+    let totalLoadProducts = 0;
+    let expectedSales = 0;
+    let expectedSalesWholesale = 0;
+
+    deliveries.DriverLoadProducts.forEach((loadProduct) => {
+      totalLoadProducts += loadProduct.quantity;
+      expectedSales += loadProduct.quantity * loadProduct.Product!.price;
+      expectedSalesWholesale +=
+        loadProduct.quantity * loadProduct.Product!.wholesale_price;
+    });
+
+    deliveries.total_load_products = totalLoadProducts;
+    deliveries.expected_sales = expectedSales;
+    deliveries.expected_sales_wholesale = expectedSalesWholesale;
+
+    await prisma.driverLoad.update({
+      where: { driver_id: driverId },
+      data: {
+        total_load_products: totalLoadProducts,
+        expected_sales: expectedSales,
+        expected_sales_wholesale: expectedSalesWholesale,
+      },
+    });
+
+    successHandler(deliveries, res, "GET");
+  }
+);
+
 export const listOfProductsforSale = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
     const driverId = req.driver?.id;

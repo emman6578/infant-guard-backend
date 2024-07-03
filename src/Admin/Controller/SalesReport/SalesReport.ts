@@ -28,6 +28,7 @@ export const SalesReport = expressAsyncHandler(
           },
         },
       },
+      orderBy: { dateAdded: "desc" },
     });
 
     // Transform the data
