@@ -9,29 +9,26 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  // provider = "mysql"
+  // provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
-model Admin {
+model User {
   id String @id @default(uuid())
 
-  auth     Auth?
-  fullname String
-  username String  @unique
-  image    String?
-  role     Role    @default(ADMIN)
+  auth           Auth?
+  fullname       String
+  contact_number String  @unique
+  baranggay      String
+  image          String?
+  role           Role    @default(User)
 
   created   DateTime  @default(now())
   updated   DateTime  @updatedAt
   lastLogin DateTime?
 
   Token Token[]
-  Cart  Cart?
-  Order Order?
-
-  DriverLoadProducts DriverLoadProducts[]
 }
 
 model Auth {
@@ -39,8 +36,8 @@ model Auth {
 
   email String @unique
 
-  admin    Admin  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
-  admin_id String @unique
+  User    User   @relation(fields: [User_id], references: [id], onDelete: Cascade)
+  User_id String @unique
 
   created DateTime @default(now())
   updated DateTime @updatedAt
@@ -54,128 +51,11 @@ model Token {
   valid      Boolean  @default(true)
   expiration DateTime
 
-  admin    Admin?  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
-  admin_id String?
-
-  Driver   Driver? @relation(fields: [driverId], references: [id])
-  driverId String?
+  User    User?   @relation(fields: [User_id], references: [id], onDelete: Cascade)
+  User_id String?
 
   created DateTime @default(now())
   updated DateTime @updatedAt
-}
-
-model Product {
-  id String @id @default(uuid())
-
-  barcode             String?      @unique
-  name                String
-  quantity            Int
-  weight              Float
-  price               Float
-  wholesale_price     Float
-  Category            Category[]
-  brand               String
-  description         String
-  unit_of_measure     Measurement?
-  expiration          String
-  date_of_manufacture String
-  date_of_entry       DateTime     @default(now())
-  supplier            String
-
-  stock_status        StockStatus?
-  minimum_stock_level Int
-  maximum_stock_level Int
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  ProductInCart      ProductInCart[]
-  DriverLoadProducts DriverLoadProducts[]
-
-  OrderProducts OrderProducts[]
-
-  DriverSales         DriverSales[]
-  SaleSummary         SaleSummary[]
-  SalesReportProducts SalesReportProducts[]
-}
-
-model Category {
-  id String @id @default(uuid())
-
-  name String @unique
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  Product Product[]
-}
-
-model Cart {
-  id String @id @default(uuid())
-
-  ProductInCart   ProductInCart[]
-  total_price     Float?
-  wholesale_price Float?
-
-  admin    Admin  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
-  admin_id String @unique
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model ProductInCart {
-  id String @id @default(uuid())
-
-  product    Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
-  product_id String
-
-  quantity              Int
-  total                 Float
-  wholesale_price_total Float
-  status                Status?
-
-  cart    Cart   @relation(fields: [cart_id], references: [id], onDelete: Cascade)
-  cart_id String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([product_id, cart_id])
-}
-
-model Order {
-  id String @id @default(uuid())
-
-  Product OrderProducts[] //to get the product id first fetch the productin cart find the id of the product inside it
-
-  total                 Float? //base on the product get in the product in cart calculate the total order
-  wholesale_price_total Float? //base on the product get in the product in cart calculate the total order
-  payment_status        PaymentStatus?
-  quantity              Int? //this quntatity is getting from the ProductinCart
-  status                Status? //also for status fetch first the product in cart to get the status
-  address               String?
-
-  admin    Admin  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
-  admin_id String @unique
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model OrderProducts {
-  id String @id @default(uuid())
-
-  Product   Product? @relation(fields: [productId], references: [id])
-  productId String?
-
-  quantity Int
-
-  Order   Order?  @relation(fields: [orderId], references: [id])
-  orderId String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 enum Type {
@@ -184,222 +64,6 @@ enum Type {
 }
 
 enum Role {
-  ADMIN
-  DRIVER
-}
-
-enum Measurement {
-  GRAMS
-  KILOGRAMS
-  LITERS
-  PIECES
-}
-
-enum StockStatus {
-  IN_STOCK
-  OUT_OF_STOCK
-  LOW_STOCK
-}
-
-enum Status {
-  ACTIVE
-  COMPLETED
-  ABANDONED
-}
-
-enum PaymentStatus {
-  PAID
-  UNPAID
-  PROCESSING
-}
-
-enum DeliveryStatus {
-  PENDING
-  IN_TRANSIT
-  DELIVERED
-  FAILED
-}
-
-enum Approval {
-  PENDING
-  DISAPPROVED
-  APPROVED
-}
-
-model Driver {
-  id String @id @default(uuid())
-
-  fullname     String
-  email        String    @unique
-  image        String?
-  truck_number String?
-  lastLogin    DateTime?
-
-  created DateTime @default(now())
-  updated DateTime @updatedAt
-
-  Token Token[]
-
-  DriverLoad          DriverLoad?
-  DriverSales         DriverSales[]
-  SaleSummary         SaleSummary[]
-  SalesReportProducts SalesReportProducts[]
-  SalesReport         SalesReport[]
-}
-
-model DriverLoad {
-  id String @id @default(uuid())
-
-  DriverLoadProducts       DriverLoadProducts[]
-  total_load_products      Int?
-  expected_sales           Float?
-  expected_sales_wholesale Float?
-  status                   SalesStatus          @default(FORSALE)
-
-  driver    Driver? @relation(fields: [driver_id], references: [id])
-  driver_id String? @unique
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model DriverLoadProducts {
-  id String @id @default(uuid())
-
-  Product    Product? @relation(fields: [product_id], references: [id])
-  product_id String?
-
-  quantity Int
-
-  DriverLoad    DriverLoad? @relation(fields: [driverLoad_id], references: [id])
-  driverLoad_id String?
-
-  admin    Admin?  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
-  admin_id String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model DriverSales {
-  id String @id @default(uuid())
-
-  Product    Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
-  product_id String
-
-  sales          Float
-  saleType       SaleType?
-  quantity       Float?
-  status         SalesStatus     @default(CONFIRMED)
-  paymentOptions PaymentOptions?
-  paymentStatus  PaymentStatus?
-  balance        Float           @default(0)
-
-  Customer   Customer? @relation(fields: [customerId], references: [id])
-  customerId String?
-
-  driver    Driver? @relation(fields: [driver_id], references: [id])
-  driver_id String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Customer {
-  id String @id @default(uuid())
-
-  name    String
-  address String
-
-  Purchased DriverSales[] //will list of products from delivery load
-  total     Float?
-
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  SaleSummary SaleSummary[]
-
-  SalesReportProducts SalesReportProducts[]
-}
-
-enum PaymentOptions {
-  PAY_LATER
-  GCASH
-  CASH
-}
-
-enum SaleType {
-  WHOLESALE
-  RETAIL
-}
-
-enum SalesStatus {
-  FORSALE
-  SOLD
-  CONFIRMED
-}
-
-model SaleSummary {
-  id String @id @default(uuid())
-
-  Product    Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
-  product_id String
-
-  sales          Float
-  saleType       SaleType?
-  quantity       Float?
-  status         SalesStatus     @default(SOLD)
-  paymentOptions PaymentOptions?
-  paymentStatus  PaymentStatus?
-  balance        Float           @default(0)
-
-  Customer   Customer? @relation(fields: [customerId], references: [id])
-  customerId String?
-
-  driver    Driver? @relation(fields: [driver_id], references: [id])
-  driver_id String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model SalesReport {
-  id String @id @default(uuid())
-
-  SalesReportProducts SalesReportProducts[]
-  QuantitySold        Int                   @default(0)
-
-  dateAdded DateTime @default(now())
-
-  driver    Driver? @relation(fields: [driver_id], references: [id])
-  driver_id String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model SalesReportProducts {
-  id String @id @default(uuid())
-
-  Product    Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
-  product_id String
-
-  sales          Float
-  saleType       SaleType?
-  quantity       Float?
-  status         SalesStatus     @default(SOLD)
-  paymentOptions PaymentOptions?
-  paymentStatus  PaymentStatus?
-  balance        Float           @default(0)
-
-  Customer   Customer? @relation(fields: [customerId], references: [id])
-  customerId String?
-
-  driver    Driver? @relation(fields: [driver_id], references: [id])
-  driver_id String?
-
-  SalesReport   SalesReport? @relation(fields: [salesReportId], references: [id])
-  salesReportId String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  User
+  Admin
 }

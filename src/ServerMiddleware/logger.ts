@@ -5,7 +5,7 @@ import path from "path";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import bodyParser from "body-parser";
-import { AuthRequest } from "../Admin/Middleware/authMiddleware";
+import { AuthRequest } from "../Middleware/authMiddleware";
 
 // Load environment variables
 dotenv.config();
