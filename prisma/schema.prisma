@@ -14,21 +14,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+model Parent {
   id String @id @default(uuid())
 
   auth           Auth?
   fullname       String
-  contact_number String  @unique
-  baranggay      String
+  contact_number String   @unique
+  address        Address? @relation(fields: [address_id], references: [id])
+  address_id     String?
   image          String?
-  role           Role    @default(User)
+  role           Role     @default(Parent)
 
   created   DateTime  @default(now())
   updated   DateTime  @updatedAt
   lastLogin DateTime?
 
-  Token Token[]
+  Token  Token[]
+  Infant Infant[]
 }
 
 model Auth {
@@ -36,8 +38,8 @@ model Auth {
 
   email String @unique
 
-  User    User   @relation(fields: [User_id], references: [id], onDelete: Cascade)
-  User_id String @unique
+  Parent    Parent @relation(fields: [parent_id], references: [id], onDelete: Cascade)
+  parent_id String @unique
 
   created DateTime @default(now())
   updated DateTime @updatedAt
@@ -51,8 +53,8 @@ model Token {
   valid      Boolean  @default(true)
   expiration DateTime
 
-  User    User?   @relation(fields: [User_id], references: [id], onDelete: Cascade)
-  User_id String?
+  Parent    Parent? @relation(fields: [parent_id], references: [id], onDelete: Cascade)
+  parent_id String?
 
   created DateTime @default(now())
   updated DateTime @updatedAt
@@ -64,6 +66,110 @@ enum Type {
 }
 
 enum Role {
-  User
+  Parent
   Admin
 }
+
+enum Gender {
+  Male
+  Female
+}
+
+model Infant {
+  id String @id @default(uuid())
+
+  fullname       String
+  birthday       Birthday? @relation(fields: [birthday_id], references: [id])
+  birthday_id    String?
+  place_of_birth String
+  address        Address?  @relation(fields: [address_id], references: [id])
+  address_id     String?
+  height         Float
+  gender         Gender
+  weight         Float
+  mothers_name   String
+  fathers_name   String
+  health_center  String
+  family_no      Int
+
+  image String?
+
+  immunization_progress String?
+  immunization_status   String?
+
+  Parent    Parent @relation(fields: [parent_id], references: [id])
+  parent_id String @unique
+
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+}
+
+model Birthday {
+  id String @id @default(uuid())
+
+  month String
+  day   Int
+  year  Int
+
+  infant Infant[]
+
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+}
+
+model Address {
+  id String @id @default(uuid())
+
+  purok        String
+  baranggay    String
+  municipality String
+  province     String
+
+  infant Infant[]
+
+  Parent Parent[]
+
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+}
+
+//TODO: add relationship to these models below
+model Vaccination {
+  id String @id @default(uuid())
+
+  vaccine_name      String
+  vaccine_type_code String
+
+  dose_number            String
+  site_of_administration String //eg. left arm, right arm, or thigh
+  administration_route   String //eg. oral, intramascular,subcutaneous
+
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+}
+
+model Vaccination_Schedule {
+  id String @id @default(uuid())
+
+  date_of_vaccination    DateTime
+  schedule_for_next_dose DateTime
+
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+}
+
+model Vaccination_Record {
+  id String @id @default(uuid())
+
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+}
+
+//TODO: add model connected to vaccination
+
+// model Screening {
+//   id      String   @id @default(uuid())
+
+//   created DateTime @default(now())
+//   updated DateTime @updatedAt
+// }

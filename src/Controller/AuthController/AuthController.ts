@@ -5,13 +5,9 @@ import { generateAuthToken } from "../../Config/Token/generateAPIToken";
 import { sendEmail } from "../../Config/Email/sendEmail";
 import { successHandler } from "../../Middleware/ErrorHandler";
 import expressAsyncHandler from "express-async-handler";
-import { UserInterface } from "../../Interface/UserInterface";
-import {
-  checkIfEmptyFields,
-  checkRequiredFieldsAuth,
-} from "../../Helpers/validateCheckRequiredFields_Auth";
-
+import { ParentInterface } from "../../Interface/UserInterface";
 import validator from "validator";
+import { checkFieldsAuth } from "../../Helpers/checkFields";
 
 const prisma = new PrismaClient();
 const EMAIL_TOKEN_EXPIRATION_MINUTES = 10;
@@ -19,18 +15,17 @@ const API_TOKEN_EXPIRATION_HOURS = 360;
 
 export const register = expressAsyncHandler(
   async (req: Request, res: Response) => {
-    const user: UserInterface = req.body;
+    const parent: ParentInterface = req.body;
 
-    checkRequiredFieldsAuth(req);
-    checkIfEmptyFields(req);
+    checkFieldsAuth(parent);
 
-    if (!validator.isEmail(user.email)) {
+    if (!validator.isEmail(parent.email)) {
       throw new Error("Invalid email address");
     }
 
-    const existingUser = await prisma.user.findFirst({
+    const existingUser = await prisma.parent.findFirst({
       where: {
-        auth: { email: user.email },
+        auth: { email: parent.email },
       },
     });
 
@@ -38,14 +33,36 @@ export const register = expressAsyncHandler(
       throw new Error("User with this email or username already exists");
     }
 
-    const create = await prisma.user.create({
+    const existingAddress = await prisma.address.findFirst({
+      where: {
+        purok: parent.address.purok,
+        baranggay: parent.address.baranggay,
+        municipality: parent.address.municipality,
+        province: parent.address.province,
+      },
+    });
+
+    const addressId = existingAddress
+      ? existingAddress.id
+      : (
+          await prisma.address.create({
+            data: {
+              purok: parent.address.purok,
+              baranggay: parent.address.baranggay,
+              municipality: parent.address.municipality,
+              province: parent.address.province,
+            },
+          })
+        ).id;
+
+    const create = await prisma.parent.create({
       data: {
-        fullname: user.fullname,
-        contact_number: user.contact_number,
-        baranggay: user.baranggay,
+        fullname: parent.fullname,
+        contact_number: parent.contact_number,
+        address_id: addressId,
         auth: {
           create: {
-            email: user.email,
+            email: parent.email,
           },
         },
       },
@@ -67,7 +84,7 @@ export const register = expressAsyncHandler(
 
 export const createToken = expressAsyncHandler(
   async (req: Request, res: Response) => {
-    const admin: UserInterface = req.body;
+    const parent: ParentInterface = req.body;
 
     //Generate token and set expiration
     const emailToken = generateEmailToken();
@@ -75,26 +92,26 @@ export const createToken = expressAsyncHandler(
       new Date().getTime() + EMAIL_TOKEN_EXPIRATION_MINUTES * 60 * 1000
     );
 
-    if (!admin.email) {
+    if (!parent.email) {
       throw new Error("Empty email field");
     }
 
-    if (!validator.isEmail(admin.email)) {
+    if (!validator.isEmail(parent.email)) {
       throw new Error("Invalid email address");
     }
 
     const checkEmail = await prisma.auth.findUnique({
-      where: { email: admin.email },
+      where: { email: parent.email },
     });
     if (!checkEmail) {
       throw new Error("Please register first");
     }
 
-    const checkRole = await prisma.user.findUnique({
-      where: { id: checkEmail.User_id },
+    const checkRole = await prisma.parent.findUnique({
+      where: { id: checkEmail.parent_id },
     });
 
-    if (checkRole?.role !== "User") {
+    if (checkRole?.role !== "Parent") {
       throw new Error("You are not admin");
     }
 
@@ -103,9 +120,9 @@ export const createToken = expressAsyncHandler(
         type: "EMAIL",
         emailToken,
         expiration,
-        User: {
+        Parent: {
           connect: {
-            id: checkEmail.User_id,
+            id: checkEmail.parent_id,
           },
         },
       },
@@ -114,7 +131,7 @@ export const createToken = expressAsyncHandler(
     successHandler(createdTokenEmail, res, "POST");
 
     const data = {
-      to: admin.email,
+      to: parent.email,
       text: "Password Code",
       subject: "Login Code",
       htm: `This code <h1>${createdTokenEmail.emailToken}</h1> will expire in ${EMAIL_TOKEN_EXPIRATION_MINUTES} mins`,
@@ -130,7 +147,7 @@ export const authToken = expressAsyncHandler(
 
     const dbEmailToken = await prisma.token.findUnique({
       where: { emailToken },
-      include: { User: { include: { auth: true } } },
+      include: { Parent: { include: { auth: true } } },
     });
 
     if (!email || !emailToken) {
@@ -149,7 +166,7 @@ export const authToken = expressAsyncHandler(
       throw new Error("Unathorized Access: Token expired");
     }
 
-    if (dbEmailToken?.User?.auth?.email !== email) {
+    if (dbEmailToken?.Parent?.auth?.email !== email) {
       throw new Error("Unauthorized Access Register first");
     }
 
@@ -161,7 +178,7 @@ export const authToken = expressAsyncHandler(
       data: {
         type: "API",
         expiration,
-        User: { connect: { id: dbEmailToken.User_id! } },
+        Parent: { connect: { id: dbEmailToken.parent_id! } },
       },
     });
 

@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { User, PrismaClient } from "@prisma/client";
+import { Parent, PrismaClient } from "@prisma/client";
 import expressAsyncHandler from "express-async-handler";
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
 
 export interface AuthRequest extends Request {
-  admin?: User;
+  parent?: Parent;
 }
 
 export const authenticateToken = expressAsyncHandler(
@@ -26,14 +26,14 @@ export const authenticateToken = expressAsyncHandler(
       };
       const dbToken = await prisma.token.findUnique({
         where: { id: payload.tokenId },
-        include: { User: true },
+        include: { Parent: true },
       });
 
       if (!dbToken?.valid || dbToken.expiration < new Date()) {
         throw new Error("API token not valid or expired");
       }
 
-      req.admin = dbToken?.User!;
+      req.parent = dbToken?.Parent!;
     } catch (error) {
       throw new Error("Unathorized");
     }
@@ -41,34 +41,18 @@ export const authenticateToken = expressAsyncHandler(
   }
 );
 
-export const isAdmin = expressAsyncHandler(
+export const isParent = expressAsyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
-    const adminId = req.admin?.id;
+    const parent_id = req.parent?.id;
 
-    const adminUser = await prisma.user.findUnique({
-      where: { id: adminId },
+    const parentUser = await prisma.parent.findUnique({
+      where: { id: parent_id },
     });
 
-    if (adminUser!.role !== "User") {
-      throw new Error("You are not a admin");
+    if (parentUser!.role !== "Parent") {
+      throw new Error("You are not a Parent");
     } else {
       next();
     }
   }
 );
-
-// export const isDriver = expressAsyncHandler(
-//   async (req: AuthRequest, res: Response, next: NextFunction) => {
-//     const driver = req.admin?.id;
-
-//     const adminUser = await prisma.admin.findUnique({
-//       where: { id: driver },
-//     });
-
-//     if (adminUser!.role !== "DRIVER") {
-//       throw new Error("You are not a driver");
-//     } else {
-//       next();
-//     }
-//   }
-// );

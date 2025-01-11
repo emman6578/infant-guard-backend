@@ -26,7 +26,7 @@ morgan.token("body", function (req: AuthRequest, res) {
 
 // Define a custom token for morgan to log the admin's fullname
 morgan.token("user", function (req: AuthRequest, res) {
-  return req.admin?.fullname;
+  return req.parent?.fullname;
 });
 
 // Morgan middleware configuration to log to file

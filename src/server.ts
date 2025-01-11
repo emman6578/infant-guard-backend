@@ -5,6 +5,7 @@ import helmet from "helmet";
 
 // admin route import
 import AuthRoutes from "./Routes/AuthRoutes";
+import ParentRoutes from "./Routes/ParentRoutes";
 
 //error handler midddlewares
 import { errorHandler, notFound } from "./Middleware/ErrorHandler";
@@ -30,6 +31,7 @@ server.use(bodyParserMiddleware);
 
 //admin routes
 server.use("/api/auth", AuthRoutes);
+server.use("/api/parent", ParentRoutes);
 
 //error handler middleware
 server.use(notFound);
