@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Auth, PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
 import { generateEmailToken } from "../../Config/Token/generateEmailToken";
 import { generateAuthToken } from "../../Config/Token/generateAPIToken";
@@ -8,11 +8,16 @@ import expressAsyncHandler from "express-async-handler";
 import { ParentInterface } from "../../Interface/UserInterface";
 import validator from "validator";
 import { checkFieldsAuth } from "../../Helpers/checkFields";
+import { AuthRequest } from "../../Middleware/authMiddleware";
 
 const prisma = new PrismaClient();
 const EMAIL_TOKEN_EXPIRATION_MINUTES = 10;
 const API_TOKEN_EXPIRATION_HOURS = 360;
 
+//TODO: add functionality in register detect if the user is already there for example  if the user has match contact number dont create another just update the email and the address
+// first check first if the user exist by using the phone number
+// if exist update the email and address
+// if not create
 export const register = expressAsyncHandler(
   async (req: Request, res: Response) => {
     const parent: ParentInterface = req.body;
@@ -54,6 +59,31 @@ export const register = expressAsyncHandler(
             },
           })
         ).id;
+
+    const isThisUserExist = await prisma.parent.findUnique({
+      where: {
+        contact_number: parent.contact_number,
+      },
+      include: { address: true, auth: true },
+    });
+
+    if (isThisUserExist) {
+      try {
+        await prisma.parent.update({
+          where: { id: isThisUserExist.id },
+          data: {
+            fullname: parent.fullname,
+            auth: {
+              update: { email: parent.email },
+            },
+            address_id: addressId,
+          },
+        });
+        successHandler("Updated Successfully", res, "POST");
+      } catch (error: any) {
+        throw new Error(error);
+      }
+    }
 
     const create = await prisma.parent.create({
       data: {
@@ -111,10 +141,6 @@ export const createToken = expressAsyncHandler(
       where: { id: checkEmail.parent_id },
     });
 
-    if (checkRole?.role !== "Parent") {
-      throw new Error("You are not admin");
-    }
-
     const createdTokenEmail = await prisma.token.create({
       data: {
         type: "EMAIL",
@@ -128,8 +154,6 @@ export const createToken = expressAsyncHandler(
       },
     });
 
-    successHandler(createdTokenEmail, res, "POST");
-
     const data = {
       to: parent.email,
       text: "Password Code",
@@ -137,7 +161,9 @@ export const createToken = expressAsyncHandler(
       htm: `This code <h1>${createdTokenEmail.emailToken}</h1> will expire in ${EMAIL_TOKEN_EXPIRATION_MINUTES} mins`,
     };
 
-    sendEmail(data);
+    await sendEmail(data);
+
+    successHandler(createdTokenEmail, res, "POST");
   }
 );
 

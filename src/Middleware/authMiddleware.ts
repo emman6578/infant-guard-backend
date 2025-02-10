@@ -41,7 +41,7 @@ export const authenticateToken = expressAsyncHandler(
   }
 );
 
-export const isParent = expressAsyncHandler(
+export const isAdmin = expressAsyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     const parent_id = req.parent?.id;
 
@@ -49,8 +49,8 @@ export const isParent = expressAsyncHandler(
       where: { id: parent_id },
     });
 
-    if (parentUser!.role !== "Parent") {
-      throw new Error("You are not a Parent");
+    if (parentUser!.role !== "Admin") {
+      throw new Error("You are not a Admin");
     } else {
       next();
     }

@@ -8,6 +8,7 @@ import {
 const router = Router();
 
 router.post("/register", register);
+
 router.post("/login", createToken);
 router.post("/authenticate", authToken);
 

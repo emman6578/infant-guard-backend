@@ -8,9 +8,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// provider = "mysql"
 datasource db {
-  // provider = "postgresql"
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -20,10 +20,12 @@ model Parent {
   auth           Auth?
   fullname       String
   contact_number String   @unique
-  address        Address? @relation(fields: [address_id], references: [id])
+  address        Address? @relation(fields: [address_id], references: [id], onDelete: Cascade)
   address_id     String?
   image          String?
   role           Role     @default(Parent)
+
+  pushToken String?
 
   created   DateTime  @default(now())
   updated   DateTime  @updatedAt
@@ -31,6 +33,8 @@ model Parent {
 
   Token  Token[]
   Infant Infant[]
+
+  Notification Notification[]
 }
 
 model Auth {
@@ -75,39 +79,10 @@ enum Gender {
   Female
 }
 
-model Infant {
-  id String @id @default(uuid())
-
-  fullname       String
-  birthday       Birthday? @relation(fields: [birthday_id], references: [id])
-  birthday_id    String?
-  place_of_birth String
-  address        Address?  @relation(fields: [address_id], references: [id])
-  address_id     String?
-  height         Float
-  gender         Gender
-  weight         Float
-  mothers_name   String
-  fathers_name   String
-  health_center  String
-  family_no      Int
-
-  image String?
-
-  immunization_progress String?
-  immunization_status   String?
-
-  Parent    Parent @relation(fields: [parent_id], references: [id])
-  parent_id String @unique
-
-  created DateTime @default(now())
-  updated DateTime @updatedAt
-}
-
 model Birthday {
   id String @id @default(uuid())
 
-  month String
+  month Int
   day   Int
   year  Int
 
@@ -126,23 +101,54 @@ model Address {
   province     String
 
   infant Infant[]
-
   Parent Parent[]
 
   created DateTime @default(now())
   updated DateTime @updatedAt
 }
 
-//TODO: add relationship to these models below
-model Vaccination {
+model Infant {
+  id String @id @default(uuid())
+
+  fullname       String
+  birthday       Birthday? @relation(fields: [birthday_id], references: [id], onDelete: Cascade)
+  birthday_id    String?
+  place_of_birth String
+  address        Address?  @relation(fields: [address_id], references: [id], onDelete: Cascade)
+  address_id     String?
+  height         Float
+  gender         Gender
+  weight         Float
+  mothers_name   String
+  fathers_name   String
+  health_center  String
+  family_no      Int
+
+  image String?
+
+  Parent    Parent @relation(fields: [parent_id], references: [id], onDelete: Cascade)
+  parent_id String
+
+  Vaccination_Schedule Vaccination_Schedule[]
+
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+}
+
+model Vaccination_Names {
   id String @id @default(uuid())
 
   vaccine_name      String
-  vaccine_type_code String
+  vaccine_type_code String @unique
 
-  dose_number            String
-  site_of_administration String //eg. left arm, right arm, or thigh
-  administration_route   String //eg. oral, intramascular,subcutaneous
+  frequency            Int
+  //these can be converted to days 
+  //if the value is zero it means the vaccine is given at birth
+  once                 String //1,15 is for 1 month and a half same with twice and thrice
+  twice                String?
+  thrice               String?
+  //end===================
+  Vaccination_Schedule Vaccination_Schedule[]
 
   created DateTime @default(now())
   updated DateTime @updatedAt
@@ -151,25 +157,68 @@ model Vaccination {
 model Vaccination_Schedule {
   id String @id @default(uuid())
 
-  date_of_vaccination    DateTime
-  schedule_for_next_dose DateTime
+  vaccine_names Vaccination_Names[]
+  infant        Infant[]
+  Vaccination   Vaccination[]
+
+  firstDose  DateTime?
+  secondDose DateTime?
+  thirdDose  DateTime?
+
+  //for the update dates on the vacccine sched this is going to be update
+  UpdateFirstDose  DateTime?
+  UpdateSecondDose DateTime?
+  UpdateThirdDose  DateTime?
+
+  //compare the firsDose to  third dose date to this update dose date and make a remark on each dose
+  remark_FirstDose  String?
+  remark_SecondDose String?
+  remark_ThirdDose  String?
 
   created DateTime @default(now())
   updated DateTime @updatedAt
 }
 
-model Vaccination_Record {
+enum comparison {
+  LATE
+  ON_TIME
+  EARLY
+}
+
+enum Status {
+  ONGOING
+  NOT_DONE
+  DONE
+}
+
+model Vaccination {
   id String @id @default(uuid())
 
+  vaccination_schedule    Vaccination_Schedule @relation(fields: [vaccination_Schedule_id], references: [id])
+  vaccination_Schedule_id String
+
+  firstDoseStatus  Status
+  secondDoseStatus Status?
+  thirdDoseStatus  Status?
+
+  remarks String?
+
+  percentage Int @default(0)
+
   created DateTime @default(now())
   updated DateTime @updatedAt
 }
 
-//TODO: add model connected to vaccination
+model Notification {
+  id String @id @default(uuid())
 
-// model Screening {
-//   id      String   @id @default(uuid())
+  parent   Parent? @relation(fields: [parentId], references: [id])
+  parentId String?
 
-//   created DateTime @default(now())
-//   updated DateTime @updatedAt
-// }
+  title String?
+  body  String?
+  data  String?
+
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+}

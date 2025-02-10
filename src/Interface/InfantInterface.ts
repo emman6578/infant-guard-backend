@@ -3,7 +3,7 @@ import { Gender } from "@prisma/client";
 export interface InfantInterface {
   fullname: string;
   birthday: {
-    month: string;
+    month: number;
     day: number;
     year: number;
   };
@@ -19,12 +19,9 @@ export interface InfantInterface {
   weight: number;
   mothers_name: string;
   fathers_name: string;
+  contact_number: string;
   health_center: string;
   family_no: number;
-  image?: string;
   parent_id: string;
-  //TODO: revise this after changing the schema this should be on another model
-  immunization_progress?: string;
-  immunization_status?: string;
-  immunization_vaccine?: string;
+  image?: string;
 }

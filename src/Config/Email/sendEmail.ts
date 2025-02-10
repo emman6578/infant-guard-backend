@@ -11,10 +11,11 @@ export async function sendEmail(data: any) {
     },
   });
 
-  let info = await transporter.sendMail({
+  await transporter.sendMail({
     from: {
-      name: "Twitter clone",
-      address: "Twitter clone login code",
+      name: "Infant Guard Code",
+      address:
+        "This is the code you requested to log in into infant guard system",
     },
     to: data.to,
     subject: data.subject,
