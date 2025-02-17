@@ -1,3 +1,5 @@
+import { Role } from "@prisma/client";
+
 export interface ParentInterface {
   email: string;
   fullname: string;
@@ -9,4 +11,5 @@ export interface ParentInterface {
     province: string;
   };
   image?: string | null;
+  role?: Role;
 }

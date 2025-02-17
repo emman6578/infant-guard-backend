@@ -9,8 +9,9 @@ generator client {
 }
 
 // provider = "postgresql"
+// provider = "mysql"
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

@@ -89,6 +89,7 @@ export const register = expressAsyncHandler(
             email: parent.email,
           },
         },
+        role: parent.role,
       },
 
       include: {
