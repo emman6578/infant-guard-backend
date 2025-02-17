@@ -10,6 +10,8 @@ export const totalPercentage = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
     const infants = await prisma.infant.findMany({
       include: {
+        // Include the address relation
+        address: true,
         Vaccination_Schedule: {
           include: { vaccine_names: true, Vaccination: true },
         },
@@ -20,6 +22,9 @@ export const totalPercentage = expressAsyncHandler(
       id: infant.id,
       fullname: infant.fullname,
       image: infant.image,
+      // Add the infant's address and gender to the result
+      address: infant.address,
+      gender: infant.gender,
       vaccinationSched: infant.Vaccination_Schedule.map((schedule) => ({
         vaccineName: schedule.vaccine_names[0]?.vaccine_name,
         percentage: schedule.Vaccination[0]?.percentage,
@@ -31,7 +36,7 @@ export const totalPercentage = expressAsyncHandler(
       infant.vaccinationSched.sort((a, b) => {
         const sortA = parseInt(a.sort, 10); // Convert string to number
         const sortB = parseInt(b.sort, 10); // Convert string to number
-        return sortA - sortB; // Now this is a valid arithmetic operation
+        return sortA - sortB;
       });
     });
 
@@ -41,9 +46,11 @@ export const totalPercentage = expressAsyncHandler(
 
 export const adminDashboard = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
-    // 1. Fetch infant records with their vaccination schedules
+    // 1. Fetch infant records with their vaccination schedules and address
     const infantsPromise = prisma.infant.findMany({
       include: {
+        // Include the address relation
+        address: true,
         Vaccination_Schedule: {
           include: { vaccine_names: true, Vaccination: true },
         },
@@ -115,6 +122,9 @@ export const adminDashboard = expressAsyncHandler(
       id: infant.id,
       fullname: infant.fullname,
       image: infant.image,
+      // Add the infant's address and gender to the result
+      address: infant.address,
+      gender: infant.gender,
       vaccinationSched: infant.Vaccination_Schedule.map((schedule) => ({
         vaccineName: schedule.vaccine_names[0]?.vaccine_name,
         percentage: schedule.Vaccination[0]?.percentage,
@@ -161,7 +171,7 @@ export const adminDashboard = expressAsyncHandler(
         totalVaccinations,
       },
       recentParents, // Recent parent registrations or logins
-      infants: simplifiedInfants, // Detailed infant vaccination data
+      infants: simplifiedInfants, // Detailed infant vaccination data including address and gender
       vaccinationSummary: vaccinationStatusCounts, // Vaccination status summary
       notifications, // Latest notifications with parent's name included
       message: "Dashboard data fetched successfully",

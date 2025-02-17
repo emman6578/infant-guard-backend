@@ -6,7 +6,6 @@ export const checkFieldsInfantController = (infant: any) => {
     "fullname",
     "birthday",
     "place_of_birth",
-    "address",
     "height",
     "gender",
     "weight",

@@ -21,6 +21,12 @@ import {
   uploadImgProfileInfant,
 } from "../Controller/AdminController/InfantManagement";
 import multer from "multer";
+import {
+  download,
+  InfantDataToDownload,
+  listOfFileInPdf,
+  uploadPdfInfant,
+} from "../Controller/AdminController/DownloadDataController";
 
 const upload = multer({ dest: "uploads/" });
 
@@ -54,5 +60,16 @@ router.put(
   authenticateToken,
   updateVaccinationDate
 );
+
+//Download Data Routes
+router.get("/infant-data", authenticateToken, isAdmin, InfantDataToDownload);
+router.post(
+  "/upload-pdf/:id",
+  authenticateToken,
+  upload.single("pdf"),
+  uploadPdfInfant
+);
+router.get("/file", authenticateToken, listOfFileInPdf);
+router.get("/download/:filename", download);
 
 export default router;

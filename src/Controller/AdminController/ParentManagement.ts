@@ -21,11 +21,49 @@ export const deleteParent = expressAsyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const deleteParent = await prisma.parent.delete({
-      where: { id },
-    });
+    try {
+      // Find all infants associated with the parent
+      const infants = await prisma.infant.findMany({
+        where: { parent_id: id },
+        select: { id: true },
+      });
 
-    successHandler("Deleted Parent Successfully....", res, "DELETE");
+      const infantIds = infants.map((infant) => infant.id);
+
+      if (infantIds.length > 0) {
+        // Delete Vaccination records associated with infants
+        await prisma.vaccination.deleteMany({
+          where: {
+            vaccination_schedule: {
+              infant: { some: { id: { in: infantIds } } },
+            },
+          },
+        });
+
+        // Delete Vaccination_Schedule records associated with infants
+        await prisma.vaccination_Schedule.deleteMany({
+          where: { infant: { some: { id: { in: infantIds } } } },
+        });
+
+        // Delete Infants associated with the Parent
+        await prisma.infant.deleteMany({
+          where: { parent_id: id },
+        });
+      }
+
+      // Delete the Parent
+      await prisma.parent.delete({
+        where: { id },
+      });
+
+      successHandler(
+        "Deleted Parent and associated records successfully.",
+        res,
+        "DELETE"
+      );
+    } catch (error) {
+      throw new Error("Failed to delete Parent" + error);
+    }
   }
 );
 

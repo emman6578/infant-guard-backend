@@ -24,6 +24,29 @@ export const createInfant = expressAsyncHandler(
   async (req: Request, res: Response) => {
     const infant: InfantInterface = req.body;
 
+    // Find or create the address
+    const existingAddress = await prisma.address.findFirst({
+      where: {
+        purok: infant.address.purok,
+        baranggay: infant.address.baranggay,
+        municipality: infant.address.municipality,
+        province: infant.address.province,
+      },
+    });
+
+    const addressId = existingAddress
+      ? existingAddress.id
+      : (
+          await prisma.address.create({
+            data: {
+              purok: `Purok ${infant.address.purok}`,
+              baranggay: infant.address.baranggay,
+              municipality: infant.address.municipality,
+              province: infant.address.province,
+            },
+          })
+        ).id;
+
     // Get the contact number from the infant record
     const contact_info = infant.contact_number;
 
@@ -50,14 +73,7 @@ export const createInfant = expressAsyncHandler(
               email: dynamicEmail,
             },
           },
-          address: {
-            create: {
-              purok: "edit purok",
-              baranggay: "edit baranggay",
-              municipality: "edit municipality",
-              province: "edit province",
-            },
-          },
+          address_id: addressId,
         },
       });
       parentId = createParent.id;
@@ -86,29 +102,6 @@ export const createInfant = expressAsyncHandler(
     // Validate infant fields
     checkFieldsInfantController(infant);
 
-    // Find or create the address
-    const existingAddress = await prisma.address.findFirst({
-      where: {
-        purok: infant.address.purok,
-        baranggay: infant.address.baranggay,
-        municipality: infant.address.municipality,
-        province: infant.address.province,
-      },
-    });
-
-    const addressId = existingAddress
-      ? existingAddress.id
-      : (
-          await prisma.address.create({
-            data: {
-              purok: infant.address.purok,
-              baranggay: infant.address.baranggay,
-              municipality: infant.address.municipality,
-              province: infant.address.province,
-            },
-          })
-        ).id;
-
     // Find or create the birthday record
     const existingBirthday = await prisma.birthday.findFirst({
       where: {
@@ -130,13 +123,19 @@ export const createInfant = expressAsyncHandler(
           })
         ).id;
 
+    const existingParentAddress = await prisma.parent.findUnique({
+      where: { contact_number: contact_info },
+    });
+
+    const existingParentAddressId = existingParentAddress?.address_id;
+
     // Finally, create the infant record
     const create = await prisma.infant.create({
       data: {
         fullname: infant.fullname,
         birthday_id: birthdayId,
         place_of_birth: infant.place_of_birth,
-        address_id: addressId,
+        address_id: existingParentAddressId,
         height: infant.height,
         gender: infant.gender,
         weight: infant.weight,
@@ -206,15 +205,48 @@ export const deleteInfants = expressAsyncHandler(
       throw new Error("All IDs must be strings");
     }
 
-    const result = await prisma.infant.deleteMany({
-      where: {
-        id: {
-          in: ids,
-        },
-      },
-    });
+    try {
+      const result = await prisma.$transaction([
+        // Delete Vaccination records
+        prisma.vaccination.deleteMany({
+          where: {
+            vaccination_schedule: {
+              infant: {
+                some: {
+                  id: { in: ids },
+                },
+              },
+            },
+          },
+        }),
 
-    successHandler(result.count, res, "DELETE");
+        // Delete Vaccination_Schedule records
+        prisma.vaccination_Schedule.deleteMany({
+          where: {
+            infant: {
+              some: {
+                id: { in: ids },
+              },
+            },
+          },
+        }),
+
+        // Delete Infant records
+        prisma.infant.deleteMany({
+          where: {
+            id: {
+              in: ids,
+            },
+          },
+        }),
+      ]);
+
+      successHandler(result[2].count, res, "DELETE"); // Only return the deleted infants count
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: "Error deleting infants and related records", error });
+    }
   }
 );
 

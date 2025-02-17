@@ -14,10 +14,6 @@ const prisma = new PrismaClient();
 const EMAIL_TOKEN_EXPIRATION_MINUTES = 10;
 const API_TOKEN_EXPIRATION_HOURS = 360;
 
-//TODO: add functionality in register detect if the user is already there for example  if the user has match contact number dont create another just update the email and the address
-// first check first if the user exist by using the phone number
-// if exist update the email and address
-// if not create
 export const register = expressAsyncHandler(
   async (req: Request, res: Response) => {
     const parent: ParentInterface = req.body;
@@ -72,11 +68,9 @@ export const register = expressAsyncHandler(
         await prisma.parent.update({
           where: { id: isThisUserExist.id },
           data: {
-            fullname: parent.fullname,
             auth: {
               update: { email: parent.email },
             },
-            address_id: addressId,
           },
         });
         successHandler("Updated Successfully", res, "POST");
@@ -116,7 +110,6 @@ export const createToken = expressAsyncHandler(
   async (req: Request, res: Response) => {
     const parent: ParentInterface = req.body;
 
-    //Generate token and set expiration
     const emailToken = generateEmailToken();
     const expiration = new Date(
       new Date().getTime() + EMAIL_TOKEN_EXPIRATION_MINUTES * 60 * 1000
@@ -137,10 +130,6 @@ export const createToken = expressAsyncHandler(
       throw new Error("Please register first");
     }
 
-    const checkRole = await prisma.parent.findUnique({
-      where: { id: checkEmail.parent_id },
-    });
-
     const createdTokenEmail = await prisma.token.create({
       data: {
         type: "EMAIL",
@@ -154,16 +143,19 @@ export const createToken = expressAsyncHandler(
       },
     });
 
-    const data = {
-      to: parent.email,
-      text: "Password Code",
-      subject: "Login Code",
-      htm: `This code <h1>${createdTokenEmail.emailToken}</h1> will expire in ${EMAIL_TOKEN_EXPIRATION_MINUTES} mins`,
-    };
+    try {
+      const data = {
+        to: parent.email,
+        text: "Password Code",
+        subject: "Login Code",
+        htm: `This code <h1>${createdTokenEmail.emailToken}</h1> will expire in ${EMAIL_TOKEN_EXPIRATION_MINUTES} mins`,
+      };
 
-    await sendEmail(data);
-
-    successHandler(createdTokenEmail, res, "POST");
+      await sendEmail(data);
+      successHandler(createdTokenEmail, res, "POST");
+    } catch (error) {
+      throw new Error("Failed to send email" + error);
+    }
   }
 );
 

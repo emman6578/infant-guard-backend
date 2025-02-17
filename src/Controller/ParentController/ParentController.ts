@@ -18,6 +18,8 @@ export const create = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
     const infant: InfantInterface = req.body;
 
+    const infantAddressId = req?.parent?.address_id;
+
     // Check for duplicate infant record
     const existingInfant = await prisma.infant.findFirst({
       where: {
@@ -35,28 +37,6 @@ export const create = expressAsyncHandler(
     }
 
     checkFieldsInfantController(infant);
-
-    const existingAddress = await prisma.address.findFirst({
-      where: {
-        purok: infant.address.purok,
-        baranggay: infant.address.baranggay,
-        municipality: infant.address.municipality,
-        province: infant.address.province,
-      },
-    });
-
-    const addressId = existingAddress
-      ? existingAddress.id
-      : (
-          await prisma.address.create({
-            data: {
-              purok: infant.address.purok,
-              baranggay: infant.address.baranggay,
-              municipality: infant.address.municipality,
-              province: infant.address.province,
-            },
-          })
-        ).id;
 
     const existingBirthday = await prisma.birthday.findFirst({
       where: {
@@ -90,7 +70,7 @@ export const create = expressAsyncHandler(
         fullname: infant.fullname,
         birthday_id: birthdayId,
         place_of_birth: infant.place_of_birth,
-        address_id: addressId,
+        address_id: infantAddressId,
         height: infant.height,
         gender: infant.gender,
         weight: infant.weight,
@@ -938,5 +918,17 @@ export const updateExpoTokenNotification = expressAsyncHandler(
     });
 
     successHandler("Successfully updated push token notification", res, "POST");
+  }
+);
+
+export const getParentInfo = expressAsyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const id = req.parent?.id;
+
+    const findParent = await prisma.parent.findUnique({
+      where: { id },
+    });
+
+    successHandler(findParent, res, "GET");
   }
 );

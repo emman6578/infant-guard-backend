@@ -11,6 +11,7 @@ import {
   totalPercentage,
   viewVaccineScheduleOfAllInfant,
   updateExpoTokenNotification,
+  getParentInfo,
 } from "../Controller/ParentController/ParentController";
 import { authenticateToken } from "../Middleware/authMiddleware";
 import multer from "multer";
@@ -47,5 +48,7 @@ router.post(
 router.get("/percentage", authenticateToken, totalPercentage);
 
 router.post("/pushToken", authenticateToken, updateExpoTokenNotification);
+
+router.get("/parent-info", authenticateToken, getParentInfo);
 
 export default router;
