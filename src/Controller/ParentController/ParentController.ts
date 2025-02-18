@@ -908,16 +908,28 @@ export const updateExpoTokenNotification = expressAsyncHandler(
     const { expoPushToken } = req.body;
     const parentId = req.parent?.id;
 
-    const findUser = await prisma.parent.update({
-      where: {
-        id: parentId,
-      },
-      data: {
-        pushToken: expoPushToken,
-      },
+    // Retrieve the current push token for the parent
+    const parent = await prisma.parent.findUnique({
+      where: { id: parentId },
+      select: { pushToken: true },
     });
 
-    successHandler("Successfully updated push token notification", res, "POST");
+    // If the token is already updated, don't update again.
+    if (parent?.pushToken === expoPushToken) {
+      return successHandler("Push token is already up-to-date", res, "POST");
+    }
+
+    // Otherwise, update with the new token.
+    await prisma.parent.update({
+      where: { id: parentId },
+      data: { pushToken: expoPushToken },
+    });
+
+    return successHandler(
+      "Successfully updated push token notification",
+      res,
+      "POST"
+    );
   }
 );
 
