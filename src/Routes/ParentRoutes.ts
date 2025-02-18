@@ -12,6 +12,7 @@ import {
   viewVaccineScheduleOfAllInfant,
   updateExpoTokenNotification,
   getParentInfo,
+  uploadImgProfileParent,
 } from "../Controller/ParentController/ParentController";
 import { authenticateToken } from "../Middleware/authMiddleware";
 import multer from "multer";
@@ -43,6 +44,13 @@ router.post(
   authenticateToken,
   upload.single("image"),
   uploadImgProfileInfant
+);
+
+router.post(
+  "/upload-img-parent/:id",
+  authenticateToken,
+  upload.single("image"),
+  uploadImgProfileParent
 );
 
 router.get("/percentage", authenticateToken, totalPercentage);

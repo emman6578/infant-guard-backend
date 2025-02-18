@@ -932,3 +932,40 @@ export const getParentInfo = expressAsyncHandler(
     successHandler(findParent, res, "GET");
   }
 );
+
+export const uploadImgProfileParent = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const filePath = (req.file as Express.Multer.File).path;
+    const { id } = req.params;
+
+    // Upload the image to Cloudinary
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder: "uploads", // Optional: organize images in folders
+    });
+
+    fs.unlinkSync(filePath);
+
+    if (!result) {
+      throw new Error("Image upload failed");
+    }
+
+    const infant = await prisma.parent.findUnique({
+      where: { id },
+    });
+
+    if (!infant) {
+      throw new Error(`Infant with ID ${id} not found`);
+    }
+
+    const imgUrl: string = result.secure_url;
+
+    const updatedInfant = await prisma.parent.update({
+      where: { id },
+      data: {
+        image: imgUrl,
+      },
+    });
+
+    successHandler(imgUrl, res, "POST");
+  }
+);
