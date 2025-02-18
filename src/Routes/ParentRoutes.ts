@@ -13,6 +13,8 @@ import {
   updateExpoTokenNotification,
   getParentInfo,
   uploadImgProfileParent,
+  editInfant,
+  editParent,
 } from "../Controller/ParentController/ParentController";
 import { authenticateToken } from "../Middleware/authMiddleware";
 import multer from "multer";
@@ -58,5 +60,8 @@ router.get("/percentage", authenticateToken, totalPercentage);
 router.post("/pushToken", authenticateToken, updateExpoTokenNotification);
 
 router.get("/parent-info", authenticateToken, getParentInfo);
+
+router.put("/infant-update/:id", authenticateToken, editInfant);
+router.put("/parent-update/:id", authenticateToken, editParent);
 
 export default router;

@@ -969,3 +969,71 @@ export const uploadImgProfileParent = expressAsyncHandler(
     successHandler(imgUrl, res, "POST");
   }
 );
+
+export const editInfant = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const {
+      fullname,
+      address,
+      place_of_birth,
+      height,
+      gender,
+      weight,
+      health_center,
+      family_no,
+    } = req.body;
+
+    const updatedInfant = await prisma.infant.update({
+      where: { id },
+      data: {
+        fullname,
+        address: {
+          update: address,
+        },
+        place_of_birth,
+        height,
+        gender,
+        weight,
+        health_center,
+        family_no,
+      },
+      include: {
+        address: true,
+      },
+    });
+
+    if (!updatedInfant) {
+      throw new Error("Failed to update the Infant details");
+    }
+
+    successHandler(updatedInfant, res, "PUT");
+  }
+);
+
+export const editParent = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { fullname, address, contact_number } = req.body;
+
+    const updatedParent = await prisma.parent.update({
+      where: { id },
+      data: {
+        fullname,
+        address: {
+          update: address,
+        },
+        contact_number,
+      },
+      include: {
+        address: true,
+      },
+    });
+
+    if (!updatedParent) {
+      throw new Error("Failed to update the Infant details");
+    }
+
+    successHandler(updatedParent, res, "PUT");
+  }
+);
