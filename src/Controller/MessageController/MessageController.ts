@@ -6,151 +6,151 @@ import { AuthRequest } from "../../Middleware/authMiddleware";
 
 const prisma = new PrismaClient();
 
-export const create = expressAsyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const { conversationId, text, targetParentId } = req.body;
-    const sender = req.parent;
-    if (!sender) {
-      res.status(401);
-      throw new Error("Unauthorized");
-    }
+// export const create = expressAsyncHandler(
+//   async (req: AuthRequest, res: Response) => {
+//     const { conversationId, text, targetParentId } = req.body;
+//     const sender = req.parent;
+//     if (!sender) {
+//       res.status(401);
+//       throw new Error("Unauthorized");
+//     }
 
-    let conversation;
+//     let conversation;
 
-    if (sender.role === "Parent") {
-      // Parent flow: try to reuse an existing conversation that includes all Admins.
-      if (conversationId) {
-        conversation = await prisma.conversation.findUnique({
-          where: { id: conversationId },
-          include: { participants: true },
-        });
-      } else {
-        // Fetch all Admins.
-        const admins = await prisma.parent.findMany({
-          where: { role: "Admin" },
-        });
-        const adminIds = admins.map((admin) => admin.id);
+//     if (sender.role === "Parent") {
+//       // Parent flow: try to reuse an existing conversation that includes all Admins.
+//       if (conversationId) {
+//         conversation = await prisma.conversation.findUnique({
+//           where: { id: conversationId },
+//           include: { participants: true },
+//         });
+//       } else {
+//         // Fetch all Admins.
+//         const admins = await prisma.parent.findMany({
+//           where: { role: "Admin" },
+//         });
+//         const adminIds = admins.map((admin) => admin.id);
 
-        // Find all conversations that include the current Parent.
-        const parentConversations = await prisma.conversation.findMany({
-          where: {
-            participants: { some: { id: sender.id } },
-          },
-          include: { participants: true },
-        });
+//         // Find all conversations that include the current Parent.
+//         const parentConversations = await prisma.conversation.findMany({
+//           where: {
+//             participants: { some: { id: sender.id } },
+//           },
+//           include: { participants: true },
+//         });
 
-        // Look for a conversation that already includes all Admins.
-        conversation = parentConversations.find((conv) => {
-          const participantIds = conv.participants.map((p) => p.id);
-          return adminIds.every((adminId) => participantIds.includes(adminId));
-        });
+//         // Look for a conversation that already includes all Admins.
+//         conversation = parentConversations.find((conv) => {
+//           const participantIds = conv.participants.map((p) => p.id);
+//           return adminIds.every((adminId) => participantIds.includes(adminId));
+//         });
 
-        if (!conversation) {
-          // If not found, create a new conversation with Parent and all Admins.
-          conversation = await prisma.conversation.create({
-            data: {
-              participants: {
-                connect: [{ id: sender.id }, ...adminIds.map((id) => ({ id }))],
-              },
-            },
-            include: { participants: true },
-          });
-        } else {
-          // Ensure the conversation has all Admins (in case some were added later).
-          const participantIds = conversation.participants.map((p) => p.id);
-          const missingAdmins = adminIds.filter(
-            (adminId) => !participantIds.includes(adminId)
-          );
-          if (missingAdmins.length > 0) {
-            conversation = await prisma.conversation.update({
-              where: { id: conversation.id },
-              data: {
-                participants: {
-                  connect: missingAdmins.map((id) => ({ id })),
-                },
-              },
-              include: { participants: true },
-            });
-          }
-        }
-      }
-    } else if (sender.role === "Admin") {
-      // For Admins, a targetParentId is required.
-      if (!targetParentId) {
-        res.status(400);
-        throw new Error("targetParentId is required for admin messages");
-      }
+//         if (!conversation) {
+//           // If not found, create a new conversation with Parent and all Admins.
+//           conversation = await prisma.conversation.create({
+//             data: {
+//               participants: {
+//                 connect: [{ id: sender.id }, ...adminIds.map((id) => ({ id }))],
+//               },
+//             },
+//             include: { participants: true },
+//           });
+//         } else {
+//           // Ensure the conversation has all Admins (in case some were added later).
+//           const participantIds = conversation.participants.map((p) => p.id);
+//           const missingAdmins = adminIds.filter(
+//             (adminId) => !participantIds.includes(adminId)
+//           );
+//           if (missingAdmins.length > 0) {
+//             conversation = await prisma.conversation.update({
+//               where: { id: conversation.id },
+//               data: {
+//                 participants: {
+//                   connect: missingAdmins.map((id) => ({ id })),
+//                 },
+//               },
+//               include: { participants: true },
+//             });
+//           }
+//         }
+//       }
+//     } else if (sender.role === "Admin") {
+//       // For Admins, a targetParentId is required.
+//       if (!targetParentId) {
+//         res.status(400);
+//         throw new Error("targetParentId is required for admin messages");
+//       }
 
-      if (conversationId) {
-        // If conversationId is provided, fetch and validate the conversation.
-        conversation = await prisma.conversation.findUnique({
-          where: { id: conversationId },
-          include: { participants: true },
-        });
-        if (!conversation) {
-          res.status(404);
-          throw new Error("Conversation not found");
-        }
-        // Verify the conversation includes both the Admin and the target Parent.
-        const hasAdmin = conversation.participants.some(
-          (participant) => participant.id === sender.id
-        );
-        const hasTarget = conversation.participants.some(
-          (participant) => participant.id === targetParentId
-        );
-        if (!hasAdmin || !hasTarget) {
-          res.status(403);
-          throw new Error(
-            "Not authorized to send message in this conversation. Ensure both you and the target parent are participants."
-          );
-        }
-      } else {
-        // If no conversationId is provided, look for an existing conversation between the Admin and target Parent.
-        conversation = await prisma.conversation.findFirst({
-          where: {
-            AND: [
-              { participants: { some: { id: sender.id } } },
-              { participants: { some: { id: targetParentId } } },
-            ],
-          },
-          include: { participants: true },
-        });
+//       if (conversationId) {
+//         // If conversationId is provided, fetch and validate the conversation.
+//         conversation = await prisma.conversation.findUnique({
+//           where: { id: conversationId },
+//           include: { participants: true },
+//         });
+//         if (!conversation) {
+//           res.status(404);
+//           throw new Error("Conversation not found");
+//         }
+//         // Verify the conversation includes both the Admin and the target Parent.
+//         const hasAdmin = conversation.participants.some(
+//           (participant) => participant.id === sender.id
+//         );
+//         const hasTarget = conversation.participants.some(
+//           (participant) => participant.id === targetParentId
+//         );
+//         if (!hasAdmin || !hasTarget) {
+//           res.status(403);
+//           throw new Error(
+//             "Not authorized to send message in this conversation. Ensure both you and the target parent are participants."
+//           );
+//         }
+//       } else {
+//         // If no conversationId is provided, look for an existing conversation between the Admin and target Parent.
+//         conversation = await prisma.conversation.findFirst({
+//           where: {
+//             AND: [
+//               { participants: { some: { id: sender.id } } },
+//               { participants: { some: { id: targetParentId } } },
+//             ],
+//           },
+//           include: { participants: true },
+//         });
 
-        if (!conversation) {
-          // No existing conversation found, so create a new one.
-          conversation = await prisma.conversation.create({
-            data: {
-              participants: {
-                connect: [{ id: sender.id }, { id: targetParentId }],
-              },
-            },
-            include: { participants: true },
-          });
-        }
-      }
-    } else {
-      res.status(403);
-      throw new Error("Invalid user role");
-    }
+//         if (!conversation) {
+//           // No existing conversation found, so create a new one.
+//           conversation = await prisma.conversation.create({
+//             data: {
+//               participants: {
+//                 connect: [{ id: sender.id }, { id: targetParentId }],
+//               },
+//             },
+//             include: { participants: true },
+//           });
+//         }
+//       }
+//     } else {
+//       res.status(403);
+//       throw new Error("Invalid user role");
+//     }
 
-    // Create the message and associate it with the conversation and sender.
-    const message = await prisma.message.create({
-      data: {
-        conversation: { connect: { id: conversation!.id } },
-        sender: { connect: { id: sender.id } },
-        text,
-      },
-    });
+//     // Create the message and associate it with the conversation and sender.
+//     const message = await prisma.message.create({
+//       data: {
+//         conversation: { connect: { id: conversation!.id } },
+//         sender: { connect: { id: sender.id } },
+//         text,
+//       },
+//     });
 
-    // Optionally update the conversation's "updated" timestamp.
-    await prisma.conversation.update({
-      where: { id: conversation!.id },
-      data: { updated: new Date() },
-    });
+//     // Optionally update the conversation's "updated" timestamp.
+//     await prisma.conversation.update({
+//       where: { id: conversation!.id },
+//       data: { updated: new Date() },
+//     });
 
-    successHandler({ message }, res, "POST");
-  }
-);
+//     successHandler({ message }, res, "POST");
+//   }
+// );
 
 export const conversation = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -343,5 +343,144 @@ export const findExpoPushToken = expressAsyncHandler(
     } catch (error: any) {
       throw new Error(error);
     }
+  }
+);
+
+export const create = expressAsyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { conversationId, text, targetParentId } = req.body;
+    const sender = req.parent;
+    if (!sender) {
+      res.status(401);
+      throw new Error("Unauthorized");
+    }
+
+    let conversation;
+
+    if (sender.role === "Parent") {
+      // For a Parent, always use the unique conversation with all Admins.
+      // Even if conversationId is provided, ignore it and use this unique conversation.
+      const admins = await prisma.parent.findMany({
+        where: { role: "Admin" },
+      });
+      const adminIds = admins.map((admin) => admin.id);
+
+      // Retrieve all conversations the Parent is part of.
+      const parentConversations = await prisma.conversation.findMany({
+        where: {
+          participants: { some: { id: sender.id } },
+        },
+        include: { participants: true },
+      });
+
+      // Look for an existing conversation that includes all Admins.
+      conversation = parentConversations.find((conv) => {
+        const participantIds = conv.participants.map((p) => p.id);
+        return adminIds.every((adminId) => participantIds.includes(adminId));
+      });
+
+      if (!conversation) {
+        // No conversation exists: create a new one connecting the Parent with all Admins.
+        conversation = await prisma.conversation.create({
+          data: {
+            participants: {
+              connect: [{ id: sender.id }, ...adminIds.map((id) => ({ id }))],
+            },
+          },
+          include: { participants: true },
+        });
+      } else {
+        // If found, ensure that all Admins are connected (in case some were added later).
+        const participantIds = conversation.participants.map((p) => p.id);
+        const missingAdmins = adminIds.filter(
+          (adminId) => !participantIds.includes(adminId)
+        );
+        if (missingAdmins.length > 0) {
+          conversation = await prisma.conversation.update({
+            where: { id: conversation.id },
+            data: {
+              participants: {
+                connect: missingAdmins.map((id) => ({ id })),
+              },
+            },
+            include: { participants: true },
+          });
+        }
+      }
+    } else if (sender.role === "Admin") {
+      // For Admins, a targetParentId is required.
+      if (!targetParentId) {
+        res.status(400);
+        throw new Error("targetParentId is required for admin messages");
+      }
+
+      if (conversationId) {
+        // If conversationId is provided, fetch and validate the conversation.
+        conversation = await prisma.conversation.findUnique({
+          where: { id: conversationId },
+          include: { participants: true },
+        });
+        if (!conversation) {
+          res.status(404);
+          throw new Error("Conversation not found");
+        }
+        // Validate that both the Admin (sender) and the target Parent are participants.
+        const hasAdmin = conversation.participants.some(
+          (participant) => participant.id === sender.id
+        );
+        const hasTarget = conversation.participants.some(
+          (participant) => participant.id === targetParentId
+        );
+        if (!hasAdmin || !hasTarget) {
+          res.status(403);
+          throw new Error(
+            "Not authorized to send message in this conversation. Ensure both you and the target parent are participants."
+          );
+        }
+      } else {
+        // Look for an existing conversation between the Admin and the target Parent.
+        conversation = await prisma.conversation.findFirst({
+          where: {
+            AND: [
+              { participants: { some: { id: sender.id } } },
+              { participants: { some: { id: targetParentId } } },
+            ],
+          },
+          include: { participants: true },
+        });
+
+        if (!conversation) {
+          // If no conversation exists, create a new one connecting the Admin and the target Parent.
+          conversation = await prisma.conversation.create({
+            data: {
+              participants: {
+                connect: [{ id: sender.id }, { id: targetParentId }],
+              },
+            },
+            include: { participants: true },
+          });
+        }
+      }
+    } else {
+      res.status(403);
+      throw new Error("Invalid user role");
+    }
+
+    // Create the message and link it to the conversation and sender.
+    const message = await prisma.message.create({
+      data: {
+        conversation: { connect: { id: conversation!.id } },
+        sender: { connect: { id: sender.id } },
+        text,
+      },
+    });
+
+    // Update the conversation's timestamp.
+    await prisma.conversation.update({
+      where: { id: conversation!.id },
+      data: { updated: new Date() },
+    });
+
+    successHandler({ message }, res, "POST");
   }
 );
