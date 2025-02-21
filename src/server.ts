@@ -9,6 +9,7 @@ import ParentRoutes from "./Routes/ParentRoutes";
 import VaccineRoutes from "./Routes/VaccineRoutes";
 import AdminRoutes from "./Routes/AdminRoutes";
 import NotificationRoutes from "./Routes/NotificationRoutes";
+import MessageRoutes from "./Routes/MessageRoutes";
 
 //error handler midddlewares
 import { errorHandler, notFound } from "./Middleware/ErrorHandler";
@@ -39,6 +40,7 @@ server.use("/api/parent", ParentRoutes);
 server.use("/api/vaccine", VaccineRoutes);
 server.use("/api/admin", AdminRoutes);
 server.use("/api/notification", NotificationRoutes);
+server.use("/api/msg", MessageRoutes);
 
 //error handler middleware
 server.use(notFound);

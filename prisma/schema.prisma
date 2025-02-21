@@ -11,7 +11,7 @@ generator client {
 // provider = "postgresql"
 // provider = "mysql"
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -36,6 +36,9 @@ model Parent {
   Infant Infant[]
 
   Notification Notification[]
+
+  conversations Conversation[] @relation("ConversationParticipants")
+  Message       Message[]
 }
 
 model Auth {
@@ -219,6 +222,38 @@ model Notification {
   title String?
   body  String?
   data  String?
+
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+}
+
+//===========================================================================================================================================
+
+model Conversation {
+  id           String   @id @default(uuid())
+  // Many-to-many relation with Parent. The relation name "ConversationParticipants" ties it to Parent.
+  participants Parent[] @relation("ConversationParticipants")
+
+  // A conversation has many messages.
+  messages Message[]
+
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  // Each message belongs to one conversation.
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+
+  // Sender is a Parent.
+  sender   Parent @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId String
+
+  text String
+
+  read Boolean @default(false) // New field
 
   created DateTime @default(now())
   updated DateTime @updatedAt
