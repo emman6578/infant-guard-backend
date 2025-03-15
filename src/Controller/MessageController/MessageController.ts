@@ -189,7 +189,7 @@ export const conversation = expressAsyncHandler(
         );
         title = parentParticipant
           ? parentParticipant.fullname
-          : "Unknown Parent";
+          : "Deleted Parent";
       } else {
         title = "Conversation";
       }
@@ -258,31 +258,31 @@ export const read = expressAsyncHandler(
 );
 
 // Remove a message (only if the authenticated parent is the sender)
-export const removeMsg = expressAsyncHandler(
+export const deleteConversations = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const { messageId } = req.body;
-    const senderId = req.parent?.id;
+    // Expect an array of conversation IDs in the request body
+    const { conversationIds } = req.body;
 
-    // Find the message to ensure it exists and belongs to the sender
-    const message = await prisma.message.findUnique({
-      where: { id: messageId },
-    });
-
-    if (!message) {
-      res.status(404);
-      throw new Error("Message not found");
+    if (!conversationIds || !Array.isArray(conversationIds)) {
+      res.status(400);
+      throw new Error("conversationIds must be an array of conversation IDs");
     }
 
-    if (message.senderId !== senderId) {
-      res.status(403);
-      throw new Error("Not authorized to delete this message");
-    }
-
-    await prisma.message.delete({
-      where: { id: messageId },
+    // Use deleteMany to remove the conversations
+    // The onDelete: Cascade set on Message ensures that related messages are deleted automatically
+    const result = await prisma.conversation.deleteMany({
+      where: {
+        id: {
+          in: conversationIds,
+        },
+      },
     });
 
-    successHandler({ message: "Message deleted" }, res, "DELETE");
+    successHandler(
+      { message: "Conversations deleted", count: result.count },
+      res,
+      "DELETE"
+    );
   }
 );
 

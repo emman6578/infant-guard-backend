@@ -49,6 +49,10 @@ export const deleteParent = expressAsyncHandler(
         await prisma.infant.deleteMany({
           where: { parent_id: id },
         });
+
+        await prisma.notification.deleteMany({
+          where: { parentId: id },
+        });
       }
 
       // Delete the Parent

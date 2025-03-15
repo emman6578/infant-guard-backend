@@ -19,7 +19,6 @@ import {
   bodyParserMiddleware,
   loggerMiddleware,
 } from "./ServerMiddleware/logger";
-import path from "path";
 
 const server = express();
 dotenv.config();

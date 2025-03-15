@@ -5,7 +5,7 @@ import {
   conversation,
   create,
   read,
-  removeMsg,
+  deleteConversations,
   unreadCount,
   findExpoPushToken,
 } from "../Controller/MessageController/MessageController";
@@ -16,7 +16,7 @@ router.post("/", authenticateToken, create);
 router.get("/", authenticateToken, conversation);
 router.get("/unreadCount", authenticateToken, unreadCount);
 router.get("/:conversationId", authenticateToken, read);
-router.delete("/", authenticateToken, removeMsg);
+router.delete("/", authenticateToken, deleteConversations);
 router.post("/pushTokenAdmin/:id", authenticateToken, findExpoPushToken);
 
 export default router;
