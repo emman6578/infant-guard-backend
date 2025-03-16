@@ -8,21 +8,51 @@ const prisma = new PrismaClient();
 
 //TODO: Add checkers here
 
+// export const storeNotification = expressAsyncHandler(
+//   async (req: AuthRequest, res: Response) => {
+//     const { title, body, data } = req.body;
+//     const parentId = req.parent?.id;
+
+//     const createRecord = await prisma.notification.create({
+//       data: {
+//         parentId: parentId,
+//         title,
+//         body,
+//         data,
+//       },
+//     });
+
+//     successHandler(createRecord, res, "POST");
+//   }
+// );
+
 export const storeNotification = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { title, body, data } = req.body;
     const parentId = req.parent?.id;
 
-    const createRecord = await prisma.notification.create({
-      data: {
-        parentId: parentId,
+    const existingNotification = await prisma.notification.findFirst({
+      where: {
+        parentId,
         title,
-        body,
-        data,
       },
     });
 
-    successHandler(createRecord, res, "POST");
+    let notification;
+    if (existingNotification) {
+      // Update existing notification
+      notification = await prisma.notification.update({
+        where: { id: existingNotification.id },
+        data: { body, data, updated: new Date() },
+      });
+    } else {
+      // Create new notification
+      notification = await prisma.notification.create({
+        data: { parentId, title, body, data },
+      });
+    }
+
+    successHandler(notification, res, existingNotification ? "UPDATE" : "POST");
   }
 );
 
