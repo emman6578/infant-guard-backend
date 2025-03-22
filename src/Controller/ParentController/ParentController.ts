@@ -654,6 +654,77 @@ export const uploadImgProfileInfant = expressAsyncHandler(
   }
 );
 
+// export const totalPercentage = expressAsyncHandler(
+//   async (req: AuthRequest, res: Response) => {
+//     const id = req.parent?.id;
+
+//     const infantVaccination = await prisma.parent.findUnique({
+//       where: { id },
+//       select: {
+//         Infant: {
+//           select: {
+//             id: true,
+//             fullname: true,
+//             image: true,
+//             Vaccination_Schedule: {
+//               select: {
+//                 vaccine_names: {
+//                   select: {
+//                     vaccine_name: true,
+//                     vaccine_type_code: true,
+//                     frequency: true,
+//                   },
+//                 },
+//                 UpdateFirstDose: true,
+//                 UpdateSecondDose: true,
+//                 UpdateThirdDose: true,
+//               },
+//             },
+//           },
+//         },
+//       },
+//     });
+
+//     // Simplify and structure the output with total percentage
+//     const response = infantVaccination?.Infant.map((infant) => {
+//       const vaccinationSchedule = infant.Vaccination_Schedule.map(
+//         (schedule) => ({
+//           vaccineName: schedule.vaccine_names[0]?.vaccine_name,
+//           percentage: "TO DO",
+//           sort: schedule.vaccine_names[0].vaccine_type_code,
+//         })
+//       );
+
+//       // Sort by the `sort` field (vaccine_type_code) in ascending order
+//       vaccinationSchedule.sort((a, b) => {
+//         const sortA = parseInt(a.sort, 10); // Convert string to number
+//         const sortB = parseInt(b.sort, 10); // Convert string to number
+//         return sortA - sortB; // Perform arithmetic comparison
+//       });
+
+//       // Calculate the average percentage as total percentage
+//       const totalPercentage =
+//         vaccinationSchedule.length > 0
+//           ? vaccinationSchedule.reduce(
+//               (sum, schedule) => sum + (schedule.percentage || 0),
+//               0
+//             ) / vaccinationSchedule.length
+//           : 0;
+
+//       return {
+//         id: infant.id,
+//         fullname: infant.fullname,
+//         image: infant.image,
+//         vaccinationSchedule,
+//         totalPercentage: parseFloat(totalPercentage.toFixed(2)), // Keep 2 decimal places
+//       };
+//     });
+
+//     successHandler({ infants: response }, res, "GET");
+//     // successHandler(infantVaccination, res, "GET");
+//   }
+// );
+
 export const totalPercentage = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
     const id = req.parent?.id;
@@ -669,11 +740,15 @@ export const totalPercentage = expressAsyncHandler(
             Vaccination_Schedule: {
               select: {
                 vaccine_names: {
-                  select: { vaccine_name: true, vaccine_type_code: true },
+                  select: {
+                    vaccine_name: true,
+                    vaccine_type_code: true,
+                    frequency: true,
+                  },
                 },
-                Vaccination: {
-                  select: { percentage: true },
-                },
+                UpdateFirstDose: true,
+                UpdateSecondDose: true,
+                UpdateThirdDose: true,
               },
             },
           },
@@ -683,36 +758,45 @@ export const totalPercentage = expressAsyncHandler(
 
     // Simplify and structure the output with total percentage
     const response = infantVaccination?.Infant.map((infant) => {
+      // Calculate the percentage for each vaccination schedule
       const vaccinationSchedule = infant.Vaccination_Schedule.map(
-        (schedule) => ({
-          vaccineName: schedule.vaccine_names[0]?.vaccine_name,
-          percentage: schedule.Vaccination[0]?.percentage || 0,
-          sort: schedule.vaccine_names[0].vaccine_type_code,
-        })
+        (schedule) => {
+          // Count non-null update doses
+          const updatedCount = [
+            schedule.UpdateFirstDose,
+            schedule.UpdateSecondDose,
+            schedule.UpdateThirdDose,
+          ].filter((dose) => dose !== null).length;
+          // Get the expected frequency from the first vaccine_names record
+          const frequency = schedule.vaccine_names[0]?.frequency || 1; // default to 1 to avoid division by zero
+          // Calculate percentage for this schedule
+          const percentage = (updatedCount / frequency) * 100;
+          return {
+            vaccineName: schedule.vaccine_names[0]?.vaccine_name,
+            percentage,
+            sort: schedule.vaccine_names[0].vaccine_type_code,
+          };
+        }
       );
 
       // Sort by the `sort` field (vaccine_type_code) in ascending order
       vaccinationSchedule.sort((a, b) => {
-        const sortA = parseInt(a.sort, 10); // Convert string to number
-        const sortB = parseInt(b.sort, 10); // Convert string to number
-        return sortA - sortB; // Perform arithmetic comparison
+        const sortA = parseInt(a.sort, 10);
+        const sortB = parseInt(b.sort, 10);
+        return sortA - sortB;
       });
 
-      // Calculate the average percentage as total percentage
+      // Calculate the average percentage as total percentage for the infant
       const totalPercentage =
-        vaccinationSchedule.length > 0
-          ? vaccinationSchedule.reduce(
-              (sum, schedule) => sum + (schedule.percentage || 0),
-              0
-            ) / vaccinationSchedule.length
-          : 0;
+        vaccinationSchedule.reduce((acc, cur) => acc + cur.percentage, 0) /
+        vaccinationSchedule.length;
 
       return {
         id: infant.id,
         fullname: infant.fullname,
         image: infant.image,
         vaccinationSchedule,
-        totalPercentage: parseFloat(totalPercentage.toFixed(2)), // Keep 2 decimal places
+        totalPercentage: parseFloat(totalPercentage.toFixed(2)), // Rounded to 2 decimal places
       };
     });
 
@@ -812,60 +896,6 @@ export const progress = expressAsyncHandler(
             percentage = 100;
           }
         }
-
-        // Update the percentage and status for doses
-        // if (vaccination) {
-        //   const updates: Partial<typeof vaccination> = {};
-
-        //   // Update the status for doses
-        //   for (const dose of [
-        //     ...firstDoseDifferences,
-        //     ...secondDoseDifferences,
-        //     ...thirdDoseDifferences,
-        //   ]) {
-        //     const { doseType, differenceInDays } = dose;
-
-        //     if (doseType === "firstDose") {
-        //       updates.firstDoseStatus =
-        //         differenceInDays > 0 ? "NOT_DONE" : "DONE";
-        //     } else if (doseType === "secondDose") {
-        //       updates.secondDoseStatus =
-        //         differenceInDays > 0 ? "NOT_DONE" : "DONE";
-        //     } else if (doseType === "thirdDose") {
-        //       updates.thirdDoseStatus =
-        //         differenceInDays > 0 ? "NOT_DONE" : "DONE";
-        //     }
-        //   }
-
-        //   // Ensure the percentage is part of the update
-        //   await prisma.vaccination.update({
-        //     where: { id: vaccination.id },
-        //     data: { ...updates, percentage },
-        //   });
-        // } else {
-        //   await prisma.vaccination.create({
-        //     data: {
-        //       vaccination_Schedule_id: schedule.id,
-        //       firstDoseStatus:
-        //         firstDoseDifferences[0]?.differenceInDays > 0
-        //           ? "NOT_DONE"
-        //           : "DONE",
-        //       secondDoseStatus:
-        //         frequency >= 2
-        //           ? secondDoseDifferences[0]?.differenceInDays > 0
-        //             ? "NOT_DONE"
-        //             : "DONE"
-        //           : undefined,
-        //       thirdDoseStatus:
-        //         frequency === 3
-        //           ? thirdDoseDifferences[0]?.differenceInDays > 0
-        //             ? "NOT_DONE"
-        //             : "DONE"
-        //           : undefined,
-        //       percentage,
-        //     },
-        //   });
-        // }
 
         if (!vaccination) {
           await prisma.vaccination.create({
