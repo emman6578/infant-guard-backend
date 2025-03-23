@@ -6,11 +6,48 @@ import { AuthRequest } from "../../Middleware/authMiddleware";
 
 const prisma = new PrismaClient();
 
+// export const totalPercentage = expressAsyncHandler(
+//   async (req: AuthRequest, res: Response) => {
+//     const infants = await prisma.infant.findMany({
+//       include: {
+//         // Include the address relation
+//         address: true,
+//         Vaccination_Schedule: {
+//           include: { vaccine_names: true, Vaccination: true },
+//         },
+//       },
+//     });
+
+//     const simplifiedInfants = infants.map((infant) => ({
+//       id: infant.id,
+//       fullname: infant.fullname,
+//       image: infant.image,
+//       // Add the infant's address and gender to the result
+//       address: infant.address,
+//       gender: infant.gender,
+//       vaccinationSched: infant.Vaccination_Schedule.map((schedule) => ({
+//         vaccineName: schedule.vaccine_names[0]?.vaccine_name,
+//         percentage: schedule.Vaccination[0]?.percentage,
+//         sort: schedule.vaccine_names[0]?.vaccine_type_code,
+//       })),
+//     }));
+
+//     simplifiedInfants.forEach((infant) => {
+//       infant.vaccinationSched.sort((a, b) => {
+//         const sortA = parseInt(a.sort, 10); // Convert string to number
+//         const sortB = parseInt(b.sort, 10); // Convert string to number
+//         return sortA - sortB;
+//       });
+//     });
+
+//     successHandler(simplifiedInfants, res, "GET");
+//   }
+// );
+
 export const totalPercentage = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
     const infants = await prisma.infant.findMany({
       include: {
-        // Include the address relation
         address: true,
         Vaccination_Schedule: {
           include: { vaccine_names: true, Vaccination: true },
@@ -25,11 +62,19 @@ export const totalPercentage = expressAsyncHandler(
       // Add the infant's address and gender to the result
       address: infant.address,
       gender: infant.gender,
-      vaccinationSched: infant.Vaccination_Schedule.map((schedule) => ({
-        vaccineName: schedule.vaccine_names[0]?.vaccine_name,
-        percentage: schedule.Vaccination[0]?.percentage,
-        sort: schedule.vaccine_names[0]?.vaccine_type_code,
-      })),
+      vaccinationSched: infant.Vaccination_Schedule.map((schedule) => {
+        const frequency = schedule.vaccine_names[0]?.frequency; // Already a number
+        let updatedDoseCount = 0;
+        if (schedule.UpdateFirstDose) updatedDoseCount++;
+        if (frequency > 1 && schedule.UpdateSecondDose) updatedDoseCount++;
+        if (frequency > 2 && schedule.UpdateThirdDose) updatedDoseCount++;
+        const percentage = Math.round((updatedDoseCount / frequency) * 100);
+        return {
+          vaccineName: schedule.vaccine_names[0]?.vaccine_name,
+          percentage: percentage,
+          sort: schedule.vaccine_names[0]?.vaccine_type_code,
+        };
+      }),
     }));
 
     simplifiedInfants.forEach((infant) => {
@@ -39,11 +84,9 @@ export const totalPercentage = expressAsyncHandler(
         return sortA - sortB;
       });
     });
-
     successHandler(simplifiedInfants, res, "GET");
   }
 );
-
 export const adminDashboard = expressAsyncHandler(
   async (req: AuthRequest, res: Response) => {
     // 1. Fetch infant records with their vaccination schedules and address
