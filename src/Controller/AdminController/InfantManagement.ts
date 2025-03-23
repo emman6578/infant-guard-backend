@@ -61,9 +61,11 @@ export const createInfant = expressAsyncHandler(
       // If parent exists, use its id
       parentId = existingParent.id;
     } else {
-      // If not, create a new parent record and use its id
-      const parentCount = await prisma.parent.count();
-      const dynamicEmail = `edit_this_email${parentCount + 1}@gmail.com`;
+      const randomString = Array.from(
+        { length: 4 },
+        () => String.fromCharCode(97 + Math.floor(Math.random() * 26)) // Generates a random lowercase letter (a-z)
+      ).join("");
+      const dynamicEmail = `edit_this_email${randomString}@gmail.com`;
       const createParent = await prisma.parent.create({
         data: {
           fullname: infant.mothers_name,
