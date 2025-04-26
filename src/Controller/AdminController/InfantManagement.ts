@@ -320,6 +320,32 @@ export const infantOne = expressAsyncHandler(
   }
 );
 
+export const computeF1ScoreInfant = expressAsyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const infants = await prisma.infant.findMany({
+      where: { id: id },
+      include: {
+        address: true,
+        birthday: true,
+        Parent: {
+          select: {
+            id: true,
+            fullname: true,
+            auth: { select: { email: true } },
+          },
+        },
+        Vaccination_Schedule: {
+          include: { vaccine_names: true, Vaccination: true },
+        },
+      },
+    });
+
+    successHandler(infants, res, "GET");
+  }
+);
+
 export const updateVaccinationStatus = expressAsyncHandler(
   async (req: Request, res: Response) => {
     const { id, doseType, status } = req.body;

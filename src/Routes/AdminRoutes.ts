@@ -19,6 +19,7 @@ import {
   updateVaccinationDate,
   updateVaccinationStatus,
   uploadImgProfileInfant,
+  computeF1ScoreInfant,
 } from "../Controller/AdminController/InfantManagement";
 import multer from "multer";
 import {
@@ -53,6 +54,7 @@ router.post(
 router.delete("/infants-delete", authenticateToken, isAdmin, deleteInfants);
 router.put("/infant-update/:id", authenticateToken, isAdmin, editInfants);
 router.get("/infant/:id", authenticateToken, isAdmin, infantOne);
+router.get("/f1Score", authenticateToken, isAdmin, computeF1ScoreInfant);
 router.put("/update-progress", authenticateToken, updateVaccinationStatus);
 router.post("/notify/:infant_id", authenticateToken, findExpoPushToken);
 router.put(
