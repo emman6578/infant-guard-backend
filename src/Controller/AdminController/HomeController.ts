@@ -73,6 +73,9 @@ export const totalPercentage = expressAsyncHandler(
           vaccineName: schedule.vaccine_names[0]?.vaccine_name,
           percentage: percentage,
           sort: schedule.vaccine_names[0]?.vaccine_type_code,
+          firstDose: schedule.UpdateFirstDose,
+          secondDose: schedule.UpdateSecondDose,
+          thirdDose: schedule.UpdateThirdDose,
         };
       }),
     }));
